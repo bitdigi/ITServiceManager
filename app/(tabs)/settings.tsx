@@ -24,6 +24,40 @@ import { useSettings } from '@/hooks/use-settings';
 import { testTelegramConnection } from '@/lib/telegram';
 import { dataStorage } from '@/lib/storage';
 
+const TRANSLATIONS = {
+  title: 'Setări',
+  technicianInfo: 'Informații Tehnician',
+  yourName: 'Numele Dumneavoastră',
+  saveTechnicianName: 'Salvează Nume Tehnician',
+  telegramConfig: 'Configurare Telegram',
+  botToken: 'Token Bot',
+  groupId: 'ID Grup',
+  save: 'Salvează',
+  test: 'Test',
+  appSettings: 'Setări Aplicatie',
+  darkMode: 'Mod Întunecat',
+  dataManagement: 'Gestionare Date',
+  exportData: 'Export Date',
+  clearAllData: 'Șterge Toate Datele',
+  about: 'Despre',
+  appName: 'Nume Aplicatie',
+  version: 'Versiune',
+  platform: 'Platformă',
+  errorRequired: 'Câmpuri obligatorii',
+  errorEmpty: 'Numele nu poate fi gol',
+  successTechnicianName: 'Nume tehnician actualizat',
+  successTelegramConfig: 'Configurație Telegram actualizată',
+  successConnection: 'Conexiunea Telegram funcționează!',
+  errorConnection: 'Eroare la conectare cu Telegram',
+  successExported: 'Date exportate cu succes',
+  successCleared: 'Toate datele au fost șterse',
+  errorExport: 'Eroare la export',
+  errorClear: 'Eroare la ștergere',
+  clearConfirmTitle: 'Șterge Toate Datele',
+  clearConfirmMsg: 'Ești sigur că vrei să ștergi toate fișele și setările? Această acțiune nu poate fi anulată.',
+  cancel: 'Anulează',
+};
+
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
@@ -154,17 +188,17 @@ export default function SettingsScreen() {
     >
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
-          <ThemedText type="title">Settings</ThemedText>
-        </View>
+      <View style={styles.header}>
+        <ThemedText type="title">{TRANSLATIONS.title}</ThemedText>
+      </View>
 
         {/* Technician Settings */}
         <View style={styles.section}>
-          <ThemedText type="subtitle">Technician Information</ThemedText>
+          <ThemedText type="subtitle">{TRANSLATIONS.technicianInfo}</ThemedText>
 
           <TextInput
             style={[styles.input, { borderColor, color: textColor }]}
-            placeholder="Your Name"
+            placeholder={TRANSLATIONS.yourName}
             placeholderTextColor={secondaryTextColor}
             value={technicianName}
             onChangeText={setTechnicianName}
@@ -185,7 +219,7 @@ export default function SettingsScreen() {
               <ActivityIndicator color="#fff" />
             ) : (
               <ThemedText style={{ color: '#fff', fontWeight: '600' }}>
-                Save Technician Name
+                {TRANSLATIONS.saveTechnicianName}
               </ThemedText>
             )}
           </Pressable>

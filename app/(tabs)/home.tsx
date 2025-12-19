@@ -31,6 +31,25 @@ interface DashboardStats {
   totalRevenue: number;
 }
 
+// Romanian translations for Home Screen
+const TRANSLATIONS = {
+  title: 'Manager Servicii',
+  totalTickets: 'Total',
+  completedTickets: 'Finalizate',
+  pendingTickets: 'În curs',
+  search: 'Cauta client, model...',
+  noTickets: 'Nu sunt fișe de service',
+  noResults: 'Niciun rezultat pentru căutarea ta',
+  addNew: 'Apasă + pentru a adăuga o nouă fișă',
+  phone: 'Telefon:',
+  cost: 'Cost:',
+  sentTelegram: '✓ Trimis pe Telegram',
+  pending: 'În așteptare',
+  inProgress: 'În curs',
+  completed: 'Finalizat',
+  onHold: 'Suspendat',
+};
+
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -83,10 +102,10 @@ export default function HomeScreen() {
 
   const getStatusLabel = (status: TicketStatus): string => {
     const labels: Record<TicketStatus, string> = {
-      pending: 'În așteptare',
-      in_progress: 'În curs',
-      completed: 'Finalizat',
-      on_hold: 'Suspendat',
+      pending: TRANSLATIONS.pending,
+      in_progress: TRANSLATIONS.inProgress,
+      completed: TRANSLATIONS.completed,
+      on_hold: TRANSLATIONS.onHold,
     };
     return labels[status];
   };
@@ -124,35 +143,35 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <View style={styles.ticketDetails}>
-        <View style={styles.detailRow}>
-          <ThemedText style={{ fontSize: 12, color: useThemeColor({}, 'textSecondary') }}>
-            Telefon:
-          </ThemedText>
-          <ThemedText style={{ fontSize: 12, fontWeight: '500', color: textColor }}>
-            {item.clientPhone}
-          </ThemedText>
+        <View style={styles.ticketDetails}>
+          <View style={styles.detailRow}>
+            <ThemedText style={{ fontSize: 12, color: useThemeColor({}, 'textSecondary') }}>
+              {TRANSLATIONS.phone}
+            </ThemedText>
+            <ThemedText style={{ fontSize: 12, fontWeight: '500', color: textColor }}>
+              {item.clientPhone}
+            </ThemedText>
+          </View>
+          <View style={styles.detailRow}>
+            <ThemedText style={{ fontSize: 12, color: useThemeColor({}, 'textSecondary') }}>
+              {TRANSLATIONS.cost}
+            </ThemedText>
+            <ThemedText style={{ fontSize: 12, fontWeight: '600', color: tintColor }}>
+              {item.cost} RON
+            </ThemedText>
+          </View>
         </View>
-        <View style={styles.detailRow}>
-          <ThemedText style={{ fontSize: 12, color: useThemeColor({}, 'textSecondary') }}>
-            Cost:
-          </ThemedText>
-          <ThemedText style={{ fontSize: 12, fontWeight: '600', color: tintColor }}>
-            {item.cost} RON
-          </ThemedText>
-        </View>
-      </View>
 
-      <View style={styles.ticketFooter}>
-        <ThemedText style={{ fontSize: 11, color: useThemeColor({}, 'textSecondary') }}>
-          {new Date(item.dateReceived).toLocaleDateString('ro-RO')}
-        </ThemedText>
-        {item.telegramSent && (
-          <ThemedText style={{ fontSize: 11, color: '#00A86B' }}>
-            ✓ Trimis pe Telegram
+        <View style={styles.ticketFooter}>
+          <ThemedText style={{ fontSize: 11, color: useThemeColor({}, 'textSecondary') }}>
+            {new Date(item.dateReceived).toLocaleDateString('ro-RO')}
           </ThemedText>
-        )}
-      </View>
+          {item.telegramSent && (
+            <ThemedText style={{ fontSize: 11, color: '#00A86B' }}>
+              {TRANSLATIONS.sentTelegram}
+            </ThemedText>
+          )}
+        </View>
     </Pressable>
   );
 
@@ -176,7 +195,7 @@ export default function HomeScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <ThemedText type="title">Service Manager</ThemedText>
+        <ThemedText type="title">{TRANSLATIONS.title}</ThemedText>
       </View>
 
       {/* Dashboard Stats */}
@@ -187,7 +206,7 @@ export default function HomeScreen() {
               {stats.totalTickets}
             </ThemedText>
             <ThemedText style={{ fontSize: 12, color: useThemeColor({}, 'textSecondary') }}>
-              Total
+              {TRANSLATIONS.totalTickets}
             </ThemedText>
           </View>
           <View style={styles.statDivider} />
@@ -196,7 +215,7 @@ export default function HomeScreen() {
               {stats.completedTickets}
             </ThemedText>
             <ThemedText style={{ fontSize: 12, color: useThemeColor({}, 'textSecondary') }}>
-              Finalizate
+              {TRANSLATIONS.completedTickets}
             </ThemedText>
           </View>
           <View style={styles.statDivider} />
@@ -205,7 +224,7 @@ export default function HomeScreen() {
               {stats.pendingTickets}
             </ThemedText>
             <ThemedText style={{ fontSize: 12, color: useThemeColor({}, 'textSecondary') }}>
-              În curs
+              {TRANSLATIONS.pendingTickets}
             </ThemedText>
           </View>
         </View>
@@ -215,7 +234,7 @@ export default function HomeScreen() {
       <View style={[styles.searchContainer, { borderColor }]}>
         <TextInput
           style={[styles.searchInput, { color: textColor }]}
-          placeholder="Cauta client, model..."
+          placeholder={TRANSLATIONS.search}
           placeholderTextColor={useThemeColor({}, 'textSecondary')}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -236,9 +255,9 @@ export default function HomeScreen() {
         />
       ) : (
         <View style={styles.emptyState}>
-          <ThemedText type="subtitle">Nu sunt fișe de service</ThemedText>
+          <ThemedText type="subtitle">{TRANSLATIONS.noTickets}</ThemedText>
           <ThemedText style={{ color: useThemeColor({}, 'textSecondary'), marginTop: 8 }}>
-            {searchQuery ? 'Niciun rezultat pentru căutarea ta' : 'Apasă + pentru a adăuga o nouă fișă'}
+            {searchQuery ? TRANSLATIONS.noResults : TRANSLATIONS.addNew}
           </ThemedText>
         </View>
       )}

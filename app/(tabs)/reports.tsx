@@ -27,6 +27,31 @@ import { RevenueReport, TechnicianReport, ProductReport } from '@/types/ticket';
 
 type ReportTab = 'revenue' | 'technician' | 'product';
 
+const TRANSLATIONS = {
+  title: 'Rapoarte',
+  revenue: 'Venituri',
+  technician: 'Tehnicheni',
+  product: 'Produse',
+  summary: 'Rezumat',
+  totalRevenue: 'Venituri Totale',
+  totalCost: 'Cost Total',
+  profit: 'Profit',
+  tickets: 'Fișe',
+  averageValue: 'Valoare Medie',
+  byProductType: 'Pe Tip de Produs',
+  count: 'Număr',
+  successRate: 'Rata de Succes',
+  avgCost: 'Cost Mediu',
+  technicianPerformance: 'Performanță Tehnician',
+  totalTickets: 'Total Fișe',
+  completed: 'Finalizate',
+  completionRate: 'Rata de Finalizare',
+  productStatistics: 'Statistici Produs',
+  repairs: 'Reparații',
+  noData: 'Nu sunt date disponibile',
+  refresh: 'ÎMprospătează',
+};
+
 export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<ReportTab>('revenue');
@@ -84,7 +109,7 @@ export default function ReportsScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <ThemedText type="title">Reports</ThemedText>
+        <ThemedText type="title">{TRANSLATIONS.title}</ThemedText>
       </View>
 
       {/* Tab Navigation */}
@@ -107,7 +132,7 @@ export default function ReportsScreen() {
                 fontWeight: activeTab === tab ? '600' : '400',
               }}
             >
-              {tab === 'revenue' ? 'Revenue' : tab === 'technician' ? 'Technicians' : 'Products'}
+              {tab === 'revenue' ? TRANSLATIONS.revenue : tab === 'technician' ? TRANSLATIONS.technician : TRANSLATIONS.product}
             </ThemedText>
           </Pressable>
         ))}
@@ -140,7 +165,7 @@ export default function ReportsScreen() {
         onPress={loadReports}
         style={[styles.refreshButton, { backgroundColor: tintColor }]}
       >
-        <ThemedText style={{ color: '#fff', fontWeight: '600' }}>Refresh</ThemedText>
+        <ThemedText style={{ color: '#fff', fontWeight: '600' }}>{TRANSLATIONS.refresh}</ThemedText>
       </Pressable>
     </ThemedView>
   );
@@ -155,35 +180,35 @@ function RevenueReportView({ report }: { report: RevenueReport }) {
 
   return (
     <View style={styles.reportSection}>
-      <ThemedText type="subtitle">Summary</ThemedText>
+      <ThemedText type="subtitle">{TRANSLATIONS.summary}</ThemedText>
 
       <View style={[styles.statCard, { backgroundColor: surfaceColor, borderColor }]}>
         <View style={styles.statRow}>
-          <ThemedText style={{ color: secondaryTextColor }}>Total Revenue</ThemedText>
+          <ThemedText style={{ color: secondaryTextColor }}>{TRANSLATIONS.totalRevenue}</ThemedText>
           <ThemedText type="defaultSemiBold" style={{ color: successColor, fontSize: 18 }}>
             {report.totalRevenue.toFixed(2)} RON
           </ThemedText>
         </View>
         <View style={[styles.statRow, { borderTopWidth: 1, borderTopColor: borderColor }]}>
-          <ThemedText style={{ color: secondaryTextColor }}>Total Cost</ThemedText>
+          <ThemedText style={{ color: secondaryTextColor }}>{TRANSLATIONS.totalCost}</ThemedText>
           <ThemedText type="defaultSemiBold" style={{ fontSize: 16 }}>
             {report.totalCost.toFixed(2)} RON
           </ThemedText>
         </View>
         <View style={[styles.statRow, { borderTopWidth: 1, borderTopColor: borderColor }]}>
-          <ThemedText style={{ color: secondaryTextColor }}>Profit</ThemedText>
+          <ThemedText style={{ color: secondaryTextColor }}>{TRANSLATIONS.profit}</ThemedText>
           <ThemedText type="defaultSemiBold" style={{ color: successColor, fontSize: 16 }}>
             {report.totalProfit.toFixed(2)} RON
           </ThemedText>
         </View>
         <View style={[styles.statRow, { borderTopWidth: 1, borderTopColor: borderColor }]}>
-          <ThemedText style={{ color: secondaryTextColor }}>Tickets</ThemedText>
+          <ThemedText style={{ color: secondaryTextColor }}>{TRANSLATIONS.tickets}</ThemedText>
           <ThemedText type="defaultSemiBold" style={{ fontSize: 16 }}>
             {report.ticketCount}
           </ThemedText>
         </View>
         <View style={[styles.statRow, { borderTopWidth: 1, borderTopColor: borderColor }]}>
-          <ThemedText style={{ color: secondaryTextColor }}>Average Value</ThemedText>
+          <ThemedText style={{ color: secondaryTextColor }}>{TRANSLATIONS.averageValue}</ThemedText>
           <ThemedText type="defaultSemiBold" style={{ fontSize: 16 }}>
             {report.averageTicketValue.toFixed(2)} RON
           </ThemedText>
@@ -193,29 +218,29 @@ function RevenueReportView({ report }: { report: RevenueReport }) {
       {Object.keys(report.byProductType).length > 0 && (
         <>
           <ThemedText type="subtitle" style={{ marginTop: 20 }}>
-            By Product Type
+            {TRANSLATIONS.byProductType}
           </ThemedText>
           {Object.entries(report.byProductType).map(([type, data]) => (
             <View key={type} style={[styles.productCard, { backgroundColor: surfaceColor, borderColor }]}>
               <ThemedText type="defaultSemiBold" style={{ marginBottom: 8 }}>
                 {type.charAt(0).toUpperCase() + type.slice(1)}
               </ThemedText>
-              <View style={styles.productRow}>
-                <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>Count:</ThemedText>
-                <ThemedText style={{ fontWeight: '500', fontSize: 12 }}>{data.count}</ThemedText>
-              </View>
-              <View style={styles.productRow}>
-                <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>Revenue:</ThemedText>
-                <ThemedText style={{ fontWeight: '500', fontSize: 12 }}>
-                  {data.revenue.toFixed(2)} RON
-                </ThemedText>
-              </View>
-              <View style={styles.productRow}>
-                <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>Profit:</ThemedText>
-                <ThemedText style={{ fontWeight: '500', fontSize: 12, color: successColor }}>
-                  {data.profit.toFixed(2)} RON
-                </ThemedText>
-              </View>
+            <View style={styles.productRow}>
+              <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>{TRANSLATIONS.count}:</ThemedText>
+              <ThemedText style={{ fontWeight: '500', fontSize: 12 }}>{data.count}</ThemedText>
+            </View>
+            <View style={styles.productRow}>
+              <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>{TRANSLATIONS.totalRevenue}:</ThemedText>
+              <ThemedText style={{ fontWeight: '500', fontSize: 12 }}>
+                {data.revenue.toFixed(2)} RON
+              </ThemedText>
+            </View>
+            <View style={styles.productRow}>
+              <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>{TRANSLATIONS.profit}:</ThemedText>
+              <ThemedText style={{ fontWeight: '500', fontSize: 12, color: successColor }}>
+                {data.profit.toFixed(2)} RON
+              </ThemedText>
+            </View>
             </View>
           ))}
         </>
@@ -234,7 +259,7 @@ function TechnicianReportView({ reports }: { reports: TechnicianReport[] }) {
     return (
       <View style={styles.reportSection}>
         <ThemedText style={{ textAlign: 'center', color: secondaryTextColor }}>
-          No data available
+          {TRANSLATIONS.noData}
         </ThemedText>
       </View>
     );
@@ -242,7 +267,7 @@ function TechnicianReportView({ reports }: { reports: TechnicianReport[] }) {
 
   return (
     <View style={styles.reportSection}>
-      <ThemedText type="subtitle">Technician Performance</ThemedText>
+      <ThemedText type="subtitle">{TRANSLATIONS.technicianPerformance}</ThemedText>
       {reports.map((report, index) => (
         <View
           key={index}
@@ -252,31 +277,31 @@ function TechnicianReportView({ reports }: { reports: TechnicianReport[] }) {
             {report.technicianName}
           </ThemedText>
           <View style={styles.techRow}>
-            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>Total Tickets:</ThemedText>
+            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>{TRANSLATIONS.totalTickets}:</ThemedText>
             <ThemedText style={{ fontWeight: '500', fontSize: 12 }}>
               {report.ticketCount}
             </ThemedText>
           </View>
           <View style={styles.techRow}>
-            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>Completed:</ThemedText>
+            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>{TRANSLATIONS.completed}:</ThemedText>
             <ThemedText style={{ fontWeight: '500', fontSize: 12, color: successColor }}>
               {report.completedCount}
             </ThemedText>
           </View>
           <View style={styles.techRow}>
-            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>Completion Rate:</ThemedText>
+            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>{TRANSLATIONS.completionRate}:</ThemedText>
             <ThemedText style={{ fontWeight: '500', fontSize: 12 }}>
               {(report.completionRate * 100).toFixed(0)}%
             </ThemedText>
           </View>
           <View style={styles.techRow}>
-            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>Revenue:</ThemedText>
+            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>{TRANSLATIONS.totalRevenue}:</ThemedText>
             <ThemedText style={{ fontWeight: '500', fontSize: 12 }}>
               {report.totalRevenue.toFixed(2)} RON
             </ThemedText>
           </View>
           <View style={styles.techRow}>
-            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>Avg Value:</ThemedText>
+            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>{TRANSLATIONS.averageValue}:</ThemedText>
             <ThemedText style={{ fontWeight: '500', fontSize: 12 }}>
               {report.averageTicketValue.toFixed(2)} RON
             </ThemedText>
@@ -296,7 +321,7 @@ function ProductReportView({ reports }: { reports: ProductReport[] }) {
     return (
       <View style={styles.reportSection}>
         <ThemedText style={{ textAlign: 'center', color: secondaryTextColor }}>
-          No data available
+          {TRANSLATIONS.noData}
         </ThemedText>
       </View>
     );
@@ -304,7 +329,7 @@ function ProductReportView({ reports }: { reports: ProductReport[] }) {
 
   return (
     <View style={styles.reportSection}>
-      <ThemedText type="subtitle">Product Statistics</ThemedText>
+      <ThemedText type="subtitle">{TRANSLATIONS.productStatistics}</ThemedText>
       {reports.map((report, index) => (
         <View
           key={index}
@@ -314,25 +339,25 @@ function ProductReportView({ reports }: { reports: ProductReport[] }) {
             {report.productType.charAt(0).toUpperCase() + report.productType.slice(1)}
           </ThemedText>
           <View style={styles.productRow}>
-            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>Repairs:</ThemedText>
+            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>{TRANSLATIONS.repairs}:</ThemedText>
             <ThemedText style={{ fontWeight: '500', fontSize: 12 }}>
               {report.repairCount}
             </ThemedText>
           </View>
           <View style={styles.productRow}>
-            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>Success Rate:</ThemedText>
+            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>{TRANSLATIONS.successRate}:</ThemedText>
             <ThemedText style={{ fontWeight: '500', fontSize: 12 }}>
               {(report.failureRate * 100).toFixed(0)}%
             </ThemedText>
           </View>
           <View style={styles.productRow}>
-            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>Avg Cost:</ThemedText>
+            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>{TRANSLATIONS.avgCost}:</ThemedText>
             <ThemedText style={{ fontWeight: '500', fontSize: 12 }}>
               {report.averageCost.toFixed(2)} RON
             </ThemedText>
           </View>
           <View style={styles.productRow}>
-            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>Total Revenue:</ThemedText>
+            <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>{TRANSLATIONS.totalRevenue}:</ThemedText>
             <ThemedText style={{ fontWeight: '500', fontSize: 12 }}>
               {report.totalRevenue.toFixed(2)} RON
             </ThemedText>

@@ -33,6 +33,46 @@ const PRODUCT_NAMES: Record<ProductType, string> = {
   tablet: 'Tabletă',
 };
 
+const TRANSLATIONS = {
+  back: '← Înapoi',
+  edit: 'Editează',
+  delete: 'Șterge',
+  clientInfo: 'Informații Client',
+  name: 'Nume',
+  phone: 'Telefon',
+  email: 'Email',
+  productInfo: 'Informații Produs',
+  type: 'Tip',
+  model: 'Model',
+  serialNumber: 'Număr Serie',
+  serviceDetails: 'Detalii Service',
+  problemDescription: 'Descrierea Problemei',
+  diagnostic: 'Diagnostic',
+  solutionApplied: 'Soluție Aplicată',
+  costAndTechnician: 'Cost & Tehnician',
+  cost: 'Cost',
+  technician: 'Tehnician',
+  dates: 'Date',
+  dateReceived: 'Data Primirii',
+  dateDelivered: 'Data Predării',
+  telegramStatus: 'Status Telegram',
+  sentTelegram: '✓ Trimis pe Telegram',
+  notSent: '✗ Nu a fost trimis',
+  resend: 'Retrimite',
+  metadata: 'Metadate',
+  id: 'ID',
+  created: 'Creat',
+  updated: 'Actualizat',
+  deleteConfirm: 'Șterge Fișă',
+  deleteConfirmMsg: 'Ești sigur că vrei să ștergi această fișă?',
+  cancel: 'Anulează',
+  successDeleted: 'Fișă ștearsă',
+  successSentTelegram: 'Fișă trimisă pe Telegram',
+  errorDelete: 'Eroare la ștergere',
+  errorSendTelegram: 'Eroare la trimitere pe Telegram',
+  notFound: 'Fișă nu a fost găsită',
+};
+
 const STATUS_LABELS: Record<TicketStatus, string> = {
   pending: 'În așteptare',
   in_progress: 'În curs',
@@ -83,20 +123,20 @@ export default function TicketDetailScreen() {
 
   const handleDelete = () => {
     Alert.alert(
-      'Delete Ticket',
-      'Are you sure you want to delete this ticket?',
+      TRANSLATIONS.deleteConfirm,
+      TRANSLATIONS.deleteConfirmMsg,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: TRANSLATIONS.cancel, style: 'cancel' },
         {
-          text: 'Delete',
+          text: TRANSLATIONS.delete,
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteTicket(id as string);
-              Alert.alert('Success', 'Ticket deleted');
+              Alert.alert('Succes', TRANSLATIONS.successDeleted);
               router.back();
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete ticket');
+              Alert.alert('Eroare', TRANSLATIONS.errorDelete);
             }
           },
         },
@@ -127,12 +167,12 @@ export default function TicketDetailScreen() {
               : null
           );
         }
-        Alert.alert('Success', 'Ticket sent to Telegram');
+        Alert.alert('Succes', TRANSLATIONS.successSentTelegram);
       } else {
-        Alert.alert('Error', result.error || 'Failed to send to Telegram');
+        Alert.alert('Eroare', result.error || TRANSLATIONS.errorSendTelegram);
       }
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to send to Telegram');
+      Alert.alert('Eroare', error instanceof Error ? error.message : TRANSLATIONS.errorSendTelegram);
     } finally {
       setResendingTelegram(false);
     }
@@ -149,7 +189,7 @@ export default function TicketDetailScreen() {
   if (!ticket) {
     return (
       <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
-        <ThemedText>Ticket not found</ThemedText>
+        <ThemedText>{TRANSLATIONS.notFound}</ThemedText>
       </ThemedView>
     );
   }
@@ -168,17 +208,17 @@ export default function TicketDetailScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Pressable onPress={() => router.back()}>
-            <ThemedText style={{ color: tintColor, fontSize: 16 }}>← Back</ThemedText>
+            <ThemedText style={{ color: tintColor, fontSize: 16 }}>{TRANSLATIONS.back}</ThemedText>
           </Pressable>
           <View style={styles.headerActions}>
             <Pressable
               onPress={() => router.push(`/edit-ticket/${ticket.id}` as any)}
               style={styles.headerButton}
             >
-              <ThemedText style={{ color: tintColor, fontSize: 14 }}>Edit</ThemedText>
+              <ThemedText style={{ color: tintColor, fontSize: 14 }}>{TRANSLATIONS.edit}</ThemedText>
             </Pressable>
             <Pressable onPress={handleDelete} style={styles.headerButton}>
-              <ThemedText style={{ color: dangerColor, fontSize: 14 }}>Delete</ThemedText>
+              <ThemedText style={{ color: dangerColor, fontSize: 14 }}>{TRANSLATIONS.delete}</ThemedText>
             </Pressable>
           </View>
         </View>
@@ -197,44 +237,44 @@ export default function TicketDetailScreen() {
 
         {/* Client Information */}
         <View style={styles.section}>
-          <ThemedText type="subtitle">Client Information</ThemedText>
-          <DetailRow label="Name" value={ticket.clientName} />
-          <DetailRow label="Phone" value={ticket.clientPhone} />
-          <DetailRow label="Email" value={ticket.clientEmail || 'N/A'} />
+          <ThemedText type="subtitle">{TRANSLATIONS.clientInfo}</ThemedText>
+          <DetailRow label={TRANSLATIONS.name} value={ticket.clientName} />
+          <DetailRow label={TRANSLATIONS.phone} value={ticket.clientPhone} />
+          <DetailRow label={TRANSLATIONS.email} value={ticket.clientEmail || 'N/A'} />
         </View>
 
         {/* Product Information */}
         <View style={styles.section}>
-          <ThemedText type="subtitle">Product Information</ThemedText>
-          <DetailRow label="Type" value={PRODUCT_NAMES[ticket.productType]} />
-          <DetailRow label="Model" value={ticket.productModel} />
-          <DetailRow label="Serial Number" value={ticket.productSerialNumber || 'N/A'} />
+          <ThemedText type="subtitle">{TRANSLATIONS.productInfo}</ThemedText>
+          <DetailRow label={TRANSLATIONS.type} value={PRODUCT_NAMES[ticket.productType]} />
+          <DetailRow label={TRANSLATIONS.model} value={ticket.productModel} />
+          <DetailRow label={TRANSLATIONS.serialNumber} value={ticket.productSerialNumber || 'N/A'} />
         </View>
 
         {/* Service Details */}
         <View style={styles.section}>
-          <ThemedText type="subtitle">Service Details</ThemedText>
-          <DetailSection label="Problem Description" value={ticket.problemDescription} />
-          <DetailSection label="Diagnostic" value={ticket.diagnostic} />
-          <DetailSection label="Solution Applied" value={ticket.solutionApplied} />
+          <ThemedText type="subtitle">{TRANSLATIONS.serviceDetails}</ThemedText>
+          <DetailSection label={TRANSLATIONS.problemDescription} value={ticket.problemDescription} />
+          <DetailSection label={TRANSLATIONS.diagnostic} value={ticket.diagnostic} />
+          <DetailSection label={TRANSLATIONS.solutionApplied} value={ticket.solutionApplied} />
         </View>
 
         {/* Cost & Technician */}
         <View style={styles.section}>
-          <ThemedText type="subtitle">Cost & Technician</ThemedText>
-          <DetailRow label="Cost" value={`${ticket.cost} RON`} />
-          <DetailRow label="Technician" value={ticket.technicianName} />
+          <ThemedText type="subtitle">{TRANSLATIONS.costAndTechnician}</ThemedText>
+          <DetailRow label={TRANSLATIONS.cost} value={`${ticket.cost} RON`} />
+          <DetailRow label={TRANSLATIONS.technician} value={ticket.technicianName} />
         </View>
 
         {/* Dates */}
         <View style={styles.section}>
-          <ThemedText type="subtitle">Dates</ThemedText>
+          <ThemedText type="subtitle">{TRANSLATIONS.dates}</ThemedText>
           <DetailRow
-            label="Date Received"
+            label={TRANSLATIONS.dateReceived}
             value={new Date(ticket.dateReceived).toLocaleDateString('ro-RO')}
           />
           <DetailRow
-            label="Date Delivered"
+            label={TRANSLATIONS.dateDelivered}
             value={
               ticket.dateDelivered
                 ? new Date(ticket.dateDelivered).toLocaleDateString('ro-RO')
@@ -245,7 +285,7 @@ export default function TicketDetailScreen() {
 
         {/* Telegram Status */}
         <View style={styles.section}>
-          <ThemedText type="subtitle">Telegram Status</ThemedText>
+          <ThemedText type="subtitle">{TRANSLATIONS.telegramStatus}</ThemedText>
           <View style={styles.telegramStatus}>
             <View
               style={[
@@ -254,7 +294,7 @@ export default function TicketDetailScreen() {
               ]}
             />
             <ThemedText style={{ flex: 1 }}>
-              {ticket.telegramSent ? '✓ Sent to Telegram' : '✗ Not sent'}
+              {ticket.telegramSent ? TRANSLATIONS.sentTelegram : TRANSLATIONS.notSent}
             </ThemedText>
             {!ticket.telegramSent && (
               <Pressable
@@ -265,7 +305,7 @@ export default function TicketDetailScreen() {
                 {resendingTelegram ? (
                   <ActivityIndicator size="small" color={tintColor} />
                 ) : (
-                  <ThemedText style={{ color: tintColor, fontSize: 12 }}>Resend</ThemedText>
+                  <ThemedText style={{ color: tintColor, fontSize: 12 }}>{TRANSLATIONS.resend}</ThemedText>
                 )}
               </Pressable>
             )}
@@ -274,14 +314,14 @@ export default function TicketDetailScreen() {
 
         {/* Metadata */}
         <View style={styles.section}>
-          <ThemedText type="subtitle">Metadata</ThemedText>
-          <DetailRow label="ID" value={ticket.id} />
+          <ThemedText type="subtitle">{TRANSLATIONS.metadata}</ThemedText>
+          <DetailRow label={TRANSLATIONS.id} value={ticket.id} />
           <DetailRow
-            label="Created"
+            label={TRANSLATIONS.created}
             value={new Date(ticket.createdAt).toLocaleString('ro-RO')}
           />
           <DetailRow
-            label="Updated"
+            label={TRANSLATIONS.updated}
             value={new Date(ticket.updatedAt).toLocaleString('ro-RO')}
           />
         </View>

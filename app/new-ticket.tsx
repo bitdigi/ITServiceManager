@@ -36,6 +36,32 @@ const PRODUCT_TYPES: { label: string; value: ProductType }[] = [
   { label: 'Tabletă', value: 'tablet' },
 ];
 
+const TRANSLATIONS = {
+  title: 'Nouă Fișă de Service',
+  cancel: 'Anulează',
+  clientInfo: 'Informații Client',
+  clientName: 'Nume Client *',
+  phoneNumber: 'Număr Telefon *',
+  email: 'Email (opțional)',
+  productInfo: 'Informații Produs',
+  productType: 'Tip Produs *',
+  productModel: 'Model Produs *',
+  serialNumber: 'Număr Serie (opțional)',
+  serviceDetails: 'Detalii Service',
+  problemDescription: 'Descrierea Problemei *',
+  diagnostic: 'Diagnostic *',
+  solutionApplied: 'Soluție Aplicată *',
+  costAndStatus: 'Cost și Status',
+  cost: 'Cost (RON) *',
+  status: 'Status',
+  dateReceived: 'Data Primirii:',
+  saveTicket: 'Salvează Fișă',
+  errorRequired: 'Câmp obligatoriu',
+  errorValidCost: 'Cost valid necesar',
+  successCreated: 'Fișă creată cu succes',
+  errorCreating: 'Eroare la crearea fișei',
+};
+
 export default function NewTicketScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -73,31 +99,31 @@ export default function NewTicketScreen() {
 
   const validateForm = (): boolean => {
     if (!clientName.trim()) {
-      Alert.alert('Error', 'Client name is required');
+      Alert.alert('Eroare', TRANSLATIONS.errorRequired);
       return false;
     }
     if (!clientPhone.trim()) {
-      Alert.alert('Error', 'Client phone is required');
+      Alert.alert('Eroare', TRANSLATIONS.errorRequired);
       return false;
     }
     if (!productModel.trim()) {
-      Alert.alert('Error', 'Product model is required');
+      Alert.alert('Eroare', TRANSLATIONS.errorRequired);
       return false;
     }
     if (!problemDescription.trim()) {
-      Alert.alert('Error', 'Problem description is required');
+      Alert.alert('Eroare', TRANSLATIONS.errorRequired);
       return false;
     }
     if (!diagnostic.trim()) {
-      Alert.alert('Error', 'Diagnostic is required');
+      Alert.alert('Eroare', TRANSLATIONS.errorRequired);
       return false;
     }
     if (!solutionApplied.trim()) {
-      Alert.alert('Error', 'Solution applied is required');
+      Alert.alert('Eroare', TRANSLATIONS.errorRequired);
       return false;
     }
     if (!cost.trim() || isNaN(parseFloat(cost))) {
-      Alert.alert('Error', 'Valid cost is required');
+      Alert.alert('Eroare', TRANSLATIONS.errorValidCost);
       return false;
     }
     return true;
@@ -139,10 +165,10 @@ export default function NewTicketScreen() {
         });
       }
 
-      Alert.alert('Success', 'Ticket created successfully');
+      Alert.alert('Succes', TRANSLATIONS.successCreated);
       router.back();
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create ticket');
+      Alert.alert('Eroare', error instanceof Error ? error.message : TRANSLATIONS.errorCreating);
     } finally {
       setLoading(false);
     }
@@ -161,19 +187,19 @@ export default function NewTicketScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <ThemedText type="title">New Service Ticket</ThemedText>
+          <ThemedText type="title">{TRANSLATIONS.title}</ThemedText>
           <Pressable onPress={() => router.back()}>
-            <ThemedText style={{ color: tintColor, fontSize: 16 }}>Cancel</ThemedText>
+            <ThemedText style={{ color: tintColor, fontSize: 16 }}>{TRANSLATIONS.cancel}</ThemedText>
           </Pressable>
         </View>
 
         {/* Client Information */}
         <View style={styles.section}>
-          <ThemedText type="subtitle">Client Information</ThemedText>
+          <ThemedText type="subtitle">{TRANSLATIONS.clientInfo}</ThemedText>
 
           <TextInput
             style={[styles.input, { borderColor, color: textColor }]}
-            placeholder="Client Name *"
+            placeholder={TRANSLATIONS.clientName}
             placeholderTextColor={useThemeColor({}, 'textSecondary')}
             value={clientName}
             onChangeText={setClientName}
@@ -181,7 +207,7 @@ export default function NewTicketScreen() {
 
           <TextInput
             style={[styles.input, { borderColor, color: textColor }]}
-            placeholder="Phone Number *"
+            placeholder={TRANSLATIONS.phoneNumber}
             placeholderTextColor={useThemeColor({}, 'textSecondary')}
             value={clientPhone}
             onChangeText={setClientPhone}
@@ -190,7 +216,7 @@ export default function NewTicketScreen() {
 
           <TextInput
             style={[styles.input, { borderColor, color: textColor }]}
-            placeholder="Email (optional)"
+            placeholder={TRANSLATIONS.email}
             placeholderTextColor={useThemeColor({}, 'textSecondary')}
             value={clientEmail}
             onChangeText={setClientEmail}
@@ -200,10 +226,10 @@ export default function NewTicketScreen() {
 
         {/* Product Information */}
         <View style={styles.section}>
-          <ThemedText type="subtitle">Product Information</ThemedText>
+          <ThemedText type="subtitle">{TRANSLATIONS.productInfo}</ThemedText>
 
           <View style={[styles.pickerContainer, { borderColor }]}>
-            <ThemedText style={{ marginBottom: 8 }}>Product Type *</ThemedText>
+            <ThemedText style={{ marginBottom: 8 }}>{TRANSLATIONS.productType}</ThemedText>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.productTypeScroll}>
               {PRODUCT_TYPES.map(type => (
                 <Pressable
@@ -232,7 +258,7 @@ export default function NewTicketScreen() {
 
           <TextInput
             style={[styles.input, { borderColor, color: textColor }]}
-            placeholder="Product Model *"
+            placeholder={TRANSLATIONS.productModel}
             placeholderTextColor={useThemeColor({}, 'textSecondary')}
             value={productModel}
             onChangeText={setProductModel}
@@ -240,7 +266,7 @@ export default function NewTicketScreen() {
 
           <TextInput
             style={[styles.input, { borderColor, color: textColor }]}
-            placeholder="Serial Number (optional)"
+            placeholder={TRANSLATIONS.serialNumber}
             placeholderTextColor={useThemeColor({}, 'textSecondary')}
             value={productSerialNumber}
             onChangeText={setProductSerialNumber}
@@ -249,11 +275,11 @@ export default function NewTicketScreen() {
 
         {/* Service Details */}
         <View style={styles.section}>
-          <ThemedText type="subtitle">Service Details</ThemedText>
+          <ThemedText type="subtitle">{TRANSLATIONS.serviceDetails}</ThemedText>
 
           <TextInput
             style={[styles.textArea, { borderColor, color: textColor }]}
-            placeholder="Problem Description *"
+            placeholder={TRANSLATIONS.problemDescription}
             placeholderTextColor={useThemeColor({}, 'textSecondary')}
             value={problemDescription}
             onChangeText={setProblemDescription}
@@ -263,7 +289,7 @@ export default function NewTicketScreen() {
 
           <TextInput
             style={[styles.textArea, { borderColor, color: textColor }]}
-            placeholder="Diagnostic *"
+            placeholder={TRANSLATIONS.diagnostic}
             placeholderTextColor={useThemeColor({}, 'textSecondary')}
             value={diagnostic}
             onChangeText={setDiagnostic}
@@ -273,7 +299,7 @@ export default function NewTicketScreen() {
 
           <TextInput
             style={[styles.textArea, { borderColor, color: textColor }]}
-            placeholder="Solution Applied *"
+            placeholder={TRANSLATIONS.solutionApplied}
             placeholderTextColor={useThemeColor({}, 'textSecondary')}
             value={solutionApplied}
             onChangeText={setSolutionApplied}
@@ -284,11 +310,11 @@ export default function NewTicketScreen() {
 
         {/* Cost and Status */}
         <View style={styles.section}>
-          <ThemedText type="subtitle">Cost & Status</ThemedText>
+          <ThemedText type="subtitle">{TRANSLATIONS.costAndStatus}</ThemedText>
 
           <TextInput
             style={[styles.input, { borderColor, color: textColor }]}
-            placeholder="Cost (RON) *"
+            placeholder={TRANSLATIONS.cost}
             placeholderTextColor={useThemeColor({}, 'textSecondary')}
             value={cost}
             onChangeText={setCost}
@@ -296,7 +322,7 @@ export default function NewTicketScreen() {
           />
 
           <View style={[styles.pickerContainer, { borderColor }]}>
-            <ThemedText style={{ marginBottom: 8 }}>Status</ThemedText>
+            <ThemedText style={{ marginBottom: 8 }}>{TRANSLATIONS.status}</ThemedText>
             <View style={styles.statusButtonsRow}>
               {(['pending', 'in_progress', 'completed', 'on_hold'] as TicketStatus[]).map(s => (
                 <Pressable
@@ -327,7 +353,7 @@ export default function NewTicketScreen() {
             onPress={() => setShowDatePicker(true)}
             style={[styles.input, { borderColor, justifyContent: 'center' }]}
           >
-            <ThemedText>Date Received: {dateReceived.toLocaleDateString('ro-RO')}</ThemedText>
+            <ThemedText>{TRANSLATIONS.dateReceived} {dateReceived.toLocaleDateString('ro-RO')}</ThemedText>
           </Pressable>
 
           {showDatePicker && (
@@ -357,7 +383,7 @@ export default function NewTicketScreen() {
               <ActivityIndicator color="#fff" />
             ) : (
               <ThemedText style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>
-                Save Ticket
+                {TRANSLATIONS.saveTicket}
               </ThemedText>
             )}
           </Pressable>
@@ -368,7 +394,7 @@ export default function NewTicketScreen() {
             style={[styles.cancelButton, { borderColor }]}
           >
             <ThemedText style={{ color: textColor, fontWeight: '600', fontSize: 16 }}>
-              Cancel
+              {TRANSLATIONS.cancel}
             </ThemedText>
           </Pressable>
         </View>
