@@ -72,11 +72,6 @@
 
 ---
 
-## Bugs to Fix
-- [x] New Ticket screen: Some buttons have white background with invisible text
-- [x] New Ticket screen: Tickets not saving when pressing save button
-- [x] Fix ticket storage and persistence issue
-
 ## Notes
 - Using AsyncStorage for local data persistence (no cloud sync required)
 - Telegram integration via HTTP API calls

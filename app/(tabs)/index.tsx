@@ -1,386 +1,278 @@
-/**
- * Home Screen
- * Displays list of all service tickets with search and filter
- */
+import { Image } from "expo-image";
+import { useRouter, Link } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Platform, Pressable, StyleSheet } from "react-native";
 
-import React, { useState, useEffect } from 'react';
-import {
-  StyleSheet,
-  FlatList,
-  Pressable,
-  View,
-  TextInput,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { useThemeColor } from '@/hooks/use-theme-color';
-import { useTickets } from '@/hooks/use-tickets';
-import { ServiceTicket, TicketStatus } from '@/types/ticket';
-import { getDashboardStats } from '@/lib/reports';
-
-interface DashboardStats {
-  totalTickets: number;
-  completedTickets: number;
-  pendingTickets: number;
-  todayTickets: number;
-  totalRevenue: number;
-}
-
-// Romanian translations for Home Screen
-const TRANSLATIONS = {
-  title: 'Manager Servicii',
-  totalTickets: 'Total',
-  completedTickets: 'Finalizate',
-  pendingTickets: 'În curs',
-  search: 'Cauta client, model...',
-  noTickets: 'Nu sunt fișe de service',
-  noResults: 'Niciun rezultat pentru căutarea ta',
-  addNew: 'Apasă + pentru a adăuga o nouă fișă',
-  phone: 'Telefon:',
-  cost: 'Cost:',
-  sentTelegram: '✓ Trimis pe Telegram',
-  pending: 'În așteptare',
-  inProgress: 'În curs',
-  completed: 'Finalizat',
-  onHold: 'Suspendat',
-};
+import { HelloWave } from "@/components/hello-wave";
+import ParallaxScrollView from "@/components/parallax-scroll-view";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { getLoginUrl } from "@/constants/oauth";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function HomeScreen() {
+  const { user, loading, isAuthenticated, logout } = useAuth();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const { tickets, loading, error } = useTickets();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [filteredTickets, setFilteredTickets] = useState<ServiceTicket[]>([]);
 
-  const textColor = useThemeColor({}, 'text');
-  const tintColor = useThemeColor({}, 'tint');
-  const borderColor = useThemeColor({}, 'border');
-  const surfaceColor = useThemeColor({}, 'surface');
-  const secondaryTextColor = useThemeColor({}, 'textSecondary');
-  const dangerColor = useThemeColor({}, 'danger');
-
-  // Load dashboard stats
   useEffect(() => {
-    const loadStats = async () => {
-      const dashboardStats = await getDashboardStats();
-      setStats(dashboardStats);
-    };
-    loadStats();
-  }, [tickets]);
+    console.log("[HomeScreen] Auth state:", {
+      hasUser: !!user,
+      loading,
+      isAuthenticated,
+      user: user ? { id: user.id, openId: user.openId, name: user.name, email: user.email } : null,
+    });
+  }, [user, loading, isAuthenticated]);
 
-  // Filter tickets based on search query
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredTickets(tickets);
-      return;
-    }
+  const handleLogin = async () => {
+    try {
+      console.log("[Auth] Login button clicked");
+      setIsLoggingIn(true);
+      const loginUrl = getLoginUrl();
+      console.log("[Auth] Generated login URL:", loginUrl);
 
-    const query = searchQuery.toLowerCase();
-    const filtered = tickets.filter(
-      ticket =>
-        ticket.clientName.toLowerCase().includes(query) ||
-        ticket.productModel.toLowerCase().includes(query) ||
-        ticket.clientPhone.includes(query)
-    );
-    setFilteredTickets(filtered);
-  }, [searchQuery, tickets]);
+      // On web, use direct redirect in same tab
+      // On mobile, use WebBrowser to open OAuth in a separate context
+      if (Platform.OS === "web") {
+        console.log("[Auth] Web platform: redirecting to OAuth in same tab...");
+        window.location.href = loginUrl;
+        return;
+      }
 
-  const getStatusColor = (status: TicketStatus): string => {
-    const colors: Record<TicketStatus, string> = {
-      pending: '#FFA500',
-      in_progress: tintColor,
-      completed: '#00A86B',
-      on_hold: '#FF6B35',
-    };
-    return colors[status];
-  };
-
-  const getStatusLabel = (status: TicketStatus): string => {
-    const labels: Record<TicketStatus, string> = {
-      pending: TRANSLATIONS.pending,
-      in_progress: TRANSLATIONS.inProgress,
-      completed: TRANSLATIONS.completed,
-      on_hold: TRANSLATIONS.onHold,
-    };
-    return labels[status];
-  };
-
-  const renderTicketCard = ({ item }: { item: ServiceTicket }) => (
-    <Pressable
-      onPress={() => router.push(`/ticket-detail/${item.id}` as any)}
-      style={({ pressed }) => [
-        styles.ticketCard,
+      // Mobile: Open OAuth URL in browser
+      // The OAuth server will redirect to our deep link (manusapp://oauth/callback?code=...&state=...)
+      console.log("[Auth] Opening OAuth URL in browser...");
+      const result = await WebBrowser.openAuthSessionAsync(
+        loginUrl,
+        undefined, // Deep link is already configured in getLoginUrl, so no need to specify here
         {
-          backgroundColor: surfaceColor,
-          borderColor,
-          opacity: pressed ? 0.7 : 1,
+          preferEphemeralSession: false,
+          showInRecents: true,
         },
-      ]}
-    >
-      <View style={styles.ticketHeader}>
-        <View style={styles.ticketInfo}>
-          <ThemedText type="defaultSemiBold" style={{ color: textColor }}>
-            {item.clientName}
-          </ThemedText>
-          <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>
-            {item.productModel}
-          </ThemedText>
-        </View>
-        <View
-          style={[
-            styles.statusBadge,
-            { backgroundColor: getStatusColor(item.status) },
-          ]}
-        >
-          <ThemedText style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}>
-            {getStatusLabel(item.status)}
-          </ThemedText>
-        </View>
-      </View>
+      );
 
-        <View style={styles.ticketDetails}>
-          <View style={styles.detailRow}>
-            <ThemedText style={{ fontSize: 12, color: secondaryTextColor }}>
-              {TRANSLATIONS.phone}
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, fontWeight: '500', color: textColor }}>
-              {item.clientPhone}
-            </ThemedText>
-          </View>
-          <View style={styles.detailRow}>
-            <ThemedText style={{ fontSize: 12, color: secondaryTextColor }}>
-              {TRANSLATIONS.cost}
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, fontWeight: '600', color: tintColor }}>
-              {item.cost} RON
-            </ThemedText>
-          </View>
-        </View>
+      console.log("[Auth] WebBrowser result:", result);
+      if (result.type === "cancel") {
+        console.log("[Auth] OAuth cancelled by user");
+      } else if (result.type === "dismiss") {
+        console.log("[Auth] OAuth dismissed");
+      } else if (result.type === "success" && result.url) {
+        console.log("[Auth] OAuth session successful, navigating to callback:", result.url);
+        // Extract code and state from the URL
+        try {
+          // Parse the URL - it might be exp:// or a regular URL
+          let url: URL;
+          if (result.url.startsWith("exp://") || result.url.startsWith("exps://")) {
+            // For exp:// URLs, we need to parse them differently
+            // Format: exp://192.168.31.156:8081/--/oauth/callback?code=...&state=...
+            const urlStr = result.url.replace(/^exp(s)?:\/\//, "http://");
+            url = new URL(urlStr);
+          } else {
+            url = new URL(result.url);
+          }
 
-        <View style={styles.ticketFooter}>
-          <ThemedText style={{ fontSize: 11, color: secondaryTextColor }}>
-            {new Date(item.dateReceived).toLocaleDateString('ro-RO')}
-          </ThemedText>
-          {item.telegramSent && (
-            <ThemedText style={{ fontSize: 11, color: '#00A86B' }}>
-              {TRANSLATIONS.sentTelegram}
-            </ThemedText>
-          )}
-        </View>
-    </Pressable>
-  );
+          const code = url.searchParams.get("code");
+          const state = url.searchParams.get("state");
+          const error = url.searchParams.get("error");
 
-  if (loading) {
-    return (
-      <ThemedView style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={tintColor} />
-      </ThemedView>
-    );
-  }
+          console.log("[Auth] Extracted params from callback URL:", {
+            code: code?.substring(0, 20) + "...",
+            state: state?.substring(0, 20) + "...",
+            error,
+          });
 
-  if (error) {
-    return (
-      <ThemedView style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
-        <ThemedText style={{ color: 'red' }}>Eroare: {error}</ThemedText>
-      </ThemedView>
-    );
-  }
+          if (error) {
+            console.error("[Auth] OAuth error in callback:", error);
+            return;
+          }
+
+          if (code && state) {
+            // Navigate to callback route with params
+            console.log("[Auth] Navigating to callback route with params...");
+            router.push({
+              pathname: "/oauth/callback" as any,
+              params: { code, state },
+            });
+          } else {
+            console.error("[Auth] Missing code or state in callback URL");
+          }
+        } catch (err) {
+          console.error("[Auth] Failed to parse callback URL:", err, result.url);
+          // Fallback: try parsing with regex
+          const codeMatch = result.url.match(/[?&]code=([^&]+)/);
+          const stateMatch = result.url.match(/[?&]state=([^&]+)/);
+
+          if (codeMatch && stateMatch) {
+            const code = decodeURIComponent(codeMatch[1]);
+            const state = decodeURIComponent(stateMatch[1]);
+            console.log("[Auth] Fallback: extracted params via regex, navigating...");
+            router.push({
+              pathname: "/oauth/callback" as any,
+              params: { code, state },
+            });
+          } else {
+            console.error("[Auth] Could not extract code/state from URL");
+          }
+        }
+      }
+    } catch (error) {
+      console.error("[Auth] Login error:", error);
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
 
   return (
-    <ThemedView
-      style={[
-        styles.container,
-        {
-          paddingTop: Math.max(insets.top, 20),
-          paddingBottom: Math.max(insets.bottom, 20),
-        },
-      ]}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <ThemedText type="title">{TRANSLATIONS.title}</ThemedText>
-      </View>
-
-      {/* Dashboard Stats */}
-      {stats && (
-        <View style={[styles.statsContainer, { backgroundColor: surfaceColor, borderColor }]}>
-          <View style={styles.statItem}>
-            <ThemedText type="defaultSemiBold" style={{ color: tintColor }}>
-              {stats.totalTickets}
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, color: secondaryTextColor }}>
-              {TRANSLATIONS.totalTickets}
-            </ThemedText>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <ThemedText type="defaultSemiBold" style={{ color: '#00A86B' }}>
-              {stats.completedTickets}
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, color: secondaryTextColor }}>
-              {TRANSLATIONS.completedTickets}
-            </ThemedText>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <ThemedText type="defaultSemiBold" style={{ color: '#FF6B35' }}>
-              {stats.pendingTickets}
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, color: secondaryTextColor }}>
-              {TRANSLATIONS.pendingTickets}
-            </ThemedText>
-          </View>
-        </View>
-      )}
-
-      {/* Search Bar */}
-      <View style={[styles.searchContainer, { borderColor }]}>
-        <TextInput
-          style={[styles.searchInput, { color: textColor }]}
-          placeholder={TRANSLATIONS.search}
-          placeholderTextColor={secondaryTextColor}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
+    <ParallaxScrollView
+      headerBackgroundColor={{ light: "#A1CEDC", dark: "#1D3D47" }}
+      headerImage={
+        <Image
+          source={require("@/assets/images/partial-react-logo.png")}
+          style={styles.reactLogo}
         />
-      </View>
+      }
+    >
+      <ThemedView style={styles.titleContainer}>
+        <ThemedText type="title">Welcome!</ThemedText>
+        <HelloWave />
+      </ThemedView>
+      <ThemedView style={styles.authContainer}>
+        {loading ? (
+          <ActivityIndicator />
+        ) : isAuthenticated && user ? (
+          <ThemedView style={styles.userInfo}>
+            <ThemedText type="subtitle">Logged in as</ThemedText>
+            <ThemedText type="defaultSemiBold">{user.name || user.email || user.openId}</ThemedText>
+            <Pressable onPress={logout} style={styles.logoutButton}>
+              <ThemedText style={styles.logoutText}>Logout</ThemedText>
+            </Pressable>
+          </ThemedView>
+        ) : (
+          <Pressable
+            onPress={handleLogin}
+            disabled={isLoggingIn}
+            style={[styles.loginButton, isLoggingIn && styles.loginButtonDisabled]}
+          >
+            {isLoggingIn ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <ThemedText style={styles.loginText}>Login</ThemedText>
+            )}
+          </Pressable>
+        )}
+      </ThemedView>
+      <ThemedView style={styles.stepContainer}>
+        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
+        <ThemedText>
+          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
+          Press{" "}
+          <ThemedText type="defaultSemiBold">
+            {Platform.select({
+              ios: "cmd + d",
+              android: "cmd + m",
+              web: "F12",
+            })}
+          </ThemedText>{" "}
+          to open developer tools.
+        </ThemedText>
+      </ThemedView>
+      <ThemedView style={styles.stepContainer}>
+        <Link href="/modal">
+          <Link.Trigger>
+            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
+          </Link.Trigger>
+          <Link.Preview />
+          <Link.Menu>
+            <Link.MenuAction title="Action" icon="cube" onPress={() => alert("Action pressed")} />
+            <Link.MenuAction
+              title="Share"
+              icon="square.and.arrow.up"
+              onPress={() => alert("Share pressed")}
+            />
+            <Link.Menu title="More" icon="ellipsis">
+              <Link.MenuAction
+                title="Delete"
+                icon="trash"
+                destructive
+                onPress={() => alert("Delete pressed")}
+              />
+            </Link.Menu>
+          </Link.Menu>
+        </Link>
 
-      {/* Ticket List */}
-      {filteredTickets.length > 0 ? (
-        <FlatList
-          data={filteredTickets}
-          keyExtractor={item => item.id}
-          renderItem={renderTicketCard}
-          scrollEnabled={true}
-          removeClippedSubviews={true}
-          maxToRenderPerBatch={10}
-          updateCellsBatchingPeriod={50}
-          contentContainerStyle={styles.listContent}
-        />      ) : (
-        <View style={styles.emptyState}>
-          <ThemedText type="subtitle">{TRANSLATIONS.noTickets}</ThemedText>
-          <ThemedText style={{ color: secondaryTextColor, marginTop: 8 }}>
-            {searchQuery ? TRANSLATIONS.noResults : TRANSLATIONS.addNew}
-          </ThemedText>
-        </View>
-      )}
-
-      {/* Floating Action Button */}
-      <Pressable
-        onPress={() => router.push('/new-ticket')}
-        style={({ pressed }) => [
-          styles.fab,
-          {
-            backgroundColor: tintColor,
-            opacity: pressed ? 0.8 : 1,
-            bottom: insets.bottom + 70,
-          },
-        ]}
-      >
-        <ThemedText style={{ color: '#fff', fontSize: 28, fontWeight: '300' }}>+</ThemedText>
-      </Pressable>
-    </ThemedView>
+        <ThemedText>
+          {`Tap the Explore tab to learn more about what's included in this starter app.`}
+        </ThemedText>
+      </ThemedView>
+      <ThemedView style={styles.stepContainer}>
+        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
+        <ThemedText>
+          {`When you're ready, run `}
+          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{" "}
+          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{" "}
+          <ThemedText type="defaultSemiBold">app</ThemedText> to{" "}
+          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
+        </ThemedText>
+      </ThemedView>
+    </ParallaxScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
+  titleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
-  header: {
-    marginBottom: 20,
+  stepContainer: {
+    gap: 8,
+    marginBottom: 8,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
+  reactLogo: {
+    height: 178,
+    width: 290,
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+  },
+  authContainer: {
     marginBottom: 16,
-    justifyContent: 'space-around',
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: "rgba(0, 0, 0, 0.05)",
   },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
+  userInfo: {
+    gap: 8,
+    alignItems: "center",
   },
-  statDivider: {
-    width: 1,
-    backgroundColor: '#E0E0E0',
+  loginButton: {
+    backgroundColor: "#007AFF",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
   },
-  searchContainer: {
-    borderWidth: 1,
-    borderRadius: 12,
-    marginBottom: 16,
-    paddingHorizontal: 12,
-    height: 44,
-    justifyContent: 'center',
+  loginButtonDisabled: {
+    opacity: 0.6,
   },
-  searchInput: {
+  loginText: {
+    color: "#fff",
     fontSize: 16,
-    height: '100%',
+    fontWeight: "600",
   },
-  listContent: {
-    paddingBottom: 100,
-  },
-  ticketCard: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-  },
-  ticketHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  ticketInfo: {
-    flex: 1,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  logoutButton: {
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 6,
-    marginLeft: 8,
+    backgroundColor: "rgba(255, 59, 48, 0.1)",
   },
-  ticketDetails: {
-    marginBottom: 8,
-    gap: 4,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  ticketFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fab: {
-    position: 'absolute',
-    right: 16,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+  logoutText: {
+    color: "#FF3B30",
+    fontSize: 14,
+    fontWeight: "500",
   },
 });
