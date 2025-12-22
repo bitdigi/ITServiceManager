@@ -53,16 +53,16 @@ const TRANSLATIONS = {
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { tickets, loading } = useTickets();
+  const { tickets, loading, error } = useTickets();
   const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [filteredTickets, setFilteredTickets] = useState<ServiceTicket[]>([]);
 
-  const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
   const tintColor = useThemeColor({}, 'tint');
   const borderColor = useThemeColor({}, 'border');
   const surfaceColor = useThemeColor({}, 'surface');
+  const secondaryTextColor = useThemeColor({}, 'textSecondary');
 
   // Load dashboard stats
   useEffect(() => {
@@ -177,8 +177,16 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+      <ThemedView style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={tintColor} />
+      </ThemedView>
+    );
+  }
+
+  if (error) {
+    return (
+      <ThemedView style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
+        <ThemedText style={{ color: 'red' }}>Eroare: {error}</ThemedText>
       </ThemedView>
     );
   }

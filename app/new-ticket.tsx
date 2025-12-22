@@ -65,7 +65,7 @@ const TRANSLATIONS = {
 export default function NewTicketScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { createTicket } = useTickets();
+  const { createTicket, updateTicket } = useTickets();
   const { settings } = useSettings();
 
   const [loading, setLoading] = useState(false);
@@ -158,8 +158,7 @@ export default function NewTicketScreen() {
       const telegramResult = await sendTicketToTelegram(newTicket);
       if (telegramResult.success && telegramResult.messageId) {
         // Update ticket with Telegram info
-        await createTicket({
-          ...newTicket,
+        await updateTicket(newTicket.id, {
           telegramSent: true,
           telegramMessageId: telegramResult.messageId,
         });
@@ -248,6 +247,7 @@ export default function NewTicketScreen() {
                       fontSize: 12,
                       fontWeight: '500',
                     }}
+                    numberOfLines={1}
                   >
                     {type.label}
                   </ThemedText>
@@ -341,8 +341,9 @@ export default function NewTicketScreen() {
                       fontSize: 11,
                       fontWeight: '500',
                     }}
+                    numberOfLines={1}
                   >
-                    {s === 'pending' ? 'Pending' : s === 'in_progress' ? 'In Progress' : s === 'completed' ? 'Completed' : 'On Hold'}
+                    {s === 'pending' ? 'În așteptare' : s === 'in_progress' ? 'În curs' : s === 'completed' ? 'Finalizat' : 'Suspendat'}
                   </ThemedText>
                 </Pressable>
               ))}
