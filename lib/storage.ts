@@ -4,8 +4,12 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { v4 as uuidv4 } from 'uuid';
 import { ServiceTicket, TelegramConfig, AppSettings, FilterOptions, ProductType, TicketStatus } from '@/types/ticket';
+
+// Generate unique ID without crypto.getRandomValues()
+function generateId(): string {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
 
 const TICKETS_KEY = '@it_service_manager/tickets';
 const SETTINGS_KEY = '@it_service_manager/settings';
@@ -48,7 +52,7 @@ export const ticketStorage = {
     try {
       const ticket: ServiceTicket = {
         ...data,
-        id: uuidv4(),
+        id: generateId(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
