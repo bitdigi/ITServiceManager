@@ -12,6 +12,7 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,6 +23,8 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { useTickets } from '@/hooks/use-tickets';
 import { ServiceTicket, TicketStatus } from '@/types/ticket';
 import { getDashboardStats } from '@/lib/reports';
+import { syncTicketsFromTelegram } from '@/lib/telegram-sync';
+import { useSettings } from '@/hooks/use-settings';
 
 interface DashboardStats {
   totalTickets: number;
@@ -53,10 +56,12 @@ const TRANSLATIONS = {
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { tickets, loading } = useTickets();
+  const { tickets, loading, loadTickets } = useTickets();
+  const { settings } = useSettings();
   const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [filteredTickets, setFilteredTickets] = useState<ServiceTicket[]>([]);
+  const [syncing, setSyncing] = useState(false);
 
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -90,6 +95,34 @@ export default function HomeScreen() {
     );
     setFilteredTickets(filtered);
   }, [searchQuery, tickets]);
+
+  // Handle sync from Telegram
+  const handleSync = async () => {
+    if (!settings?.telegramConfig?.botToken || !settings?.telegramConfig?.groupId) {
+      Alert.alert('Eroare', 'Configurați token-ul Telegram și ID-ul grupului în Setări');
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      const result = await syncTicketsFromTelegram(
+        settings.telegramConfig.botToken,
+        settings.telegramConfig.groupId
+      );
+
+      if (result.success) {
+        // Reload tickets after sync
+        await loadTickets();
+        Alert.alert('Succes', `${result.count} fișe sincronizate de pe Telegram`);
+      } else {
+        Alert.alert('Eroare', result.error || 'Eroare la sincronizare');
+      }
+    } catch (error) {
+      Alert.alert('Eroare', error instanceof Error ? error.message : 'Eroare necunoscută');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const getStatusColor = (status: TicketStatus): string => {
     const colors: Record<TicketStatus, string> = {
@@ -231,15 +264,36 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {/* Search Bar */}
-      <View style={[styles.searchContainer, { borderColor }]}>
-        <TextInput
-          style={[styles.searchInput, { color: textColor }]}
-          placeholder={TRANSLATIONS.search}
-          placeholderTextColor={secondaryTextColor}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
+      {/* Search Bar and Sync Button */}
+      <View style={styles.searchAndSyncContainer}>
+        <View style={[styles.searchContainer, { borderColor, flex: 1 }]}>
+          <TextInput
+            style={[styles.searchInput, { color: textColor }]}
+            placeholder={TRANSLATIONS.search}
+            placeholderTextColor={secondaryTextColor}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+        <Pressable
+          onPress={handleSync}
+          disabled={syncing || loading}
+          style={({ pressed }) => [
+            styles.syncButton,
+            {
+              backgroundColor: tintColor,
+              opacity: pressed || syncing ? 0.7 : 1,
+            },
+          ]}
+        >
+          {syncing ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <ThemedText style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>
+              Sincronizare
+            </ThemedText>
+          )}
+        </Pressable>
       </View>
 
       {/* Ticket List */}
@@ -305,13 +359,27 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: '#E0E0E0',
   },
+  searchAndSyncContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
   searchContainer: {
     borderWidth: 1,
     borderRadius: 12,
-    marginBottom: 16,
     paddingHorizontal: 12,
     height: 44,
     justifyContent: 'center',
+  },
+  syncButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 100,
   },
   searchInput: {
     fontSize: 16,
