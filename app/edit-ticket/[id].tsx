@@ -283,13 +283,13 @@ export default function EditTicketScreen() {
                   style={[
                     styles.productTypeButton,
                     {
-                      backgroundColor: productType === type.value ? tintColor : buttonBgColor,
+                      backgroundColor: productType === type.value ? '#0066CC' : '#E8E8E8',
                     },
                   ]}
                 >
                   <ThemedText
                     style={{
-                      color: productType === type.value ? '#fff' : textColor,
+                      color: productType === type.value ? '#fff' : '#333333',
                       fontSize: 12,
                       fontWeight: '500',
                     }}
@@ -374,13 +374,13 @@ export default function EditTicketScreen() {
                 style={[
                   styles.statusButton,
                   {
-                    backgroundColor: status === s ? tintColor : buttonBgColor,
+                    backgroundColor: status === s ? '#0066CC' : '#E8E8E8',
                   },
                 ]}
               >
                 <ThemedText
                   style={{
-                    color: status === s ? '#fff' : textColor,
+                    color: status === s ? '#fff' : '#333333',
                     fontSize: 11,
                     fontWeight: '500',
                   }}
