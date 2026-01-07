@@ -30,7 +30,7 @@ type ReportTab = 'revenue' | 'technician' | 'product';
 const TRANSLATIONS = {
   title: 'Rapoarte',
   revenue: 'Venituri',
-  technician: 'Tehnicheni',
+  technician: 'Tehnician',
   product: 'Produse',
   summary: 'Rezumat',
   totalRevenue: 'Venituri Totale',

@@ -262,3 +262,65 @@ export async function testTelegramConnection(): Promise<{
     };
   }
 }
+
+
+/**
+ * Delete message from Telegram
+ */
+export async function deleteMessageFromTelegram(
+  messageId: string
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const config = await settingsStorage.getTelegramConfig();
+
+    if (!config.botToken || !config.groupId) {
+      return {
+        success: false,
+        error: 'Telegram configuration is missing.',
+      };
+    }
+
+    if (!messageId) {
+      return {
+        success: false,
+        error: 'Message ID is missing.',
+      };
+    }
+
+    const url = `${TELEGRAM_API_BASE}/bot${config.botToken}/deleteMessage`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: config.groupId,
+        message_id: parseInt(messageId),
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      console.error('Telegram delete error:', data);
+      return {
+        success: false,
+        error: data.description || 'Failed to delete message from Telegram',
+      };
+    }
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.error('Error deleting from Telegram:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
+  }
+}

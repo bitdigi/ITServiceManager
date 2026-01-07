@@ -20,7 +20,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { useTickets } from '@/hooks/use-tickets';
 import { ServiceTicket, TicketStatus, ProductType } from '@/types/ticket';
-import { sendTicketToTelegram } from '@/lib/telegram';
+import { sendTicketToTelegram, deleteMessageFromTelegram } from '@/lib/telegram';
 
 const PRODUCT_NAMES: Record<ProductType, string> = {
   laptop: 'Laptop',
@@ -132,6 +132,12 @@ export default function TicketDetailScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              // Delete from Telegram if message ID exists
+              if (ticket?.telegramMessageId) {
+                await deleteMessageFromTelegram(ticket.telegramMessageId);
+              }
+              
+              // Delete from local storage
               await deleteTicket(id as string);
               Alert.alert('Succes', TRANSLATIONS.successDeleted);
               router.back();
