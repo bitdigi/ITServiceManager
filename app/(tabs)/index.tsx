@@ -281,15 +281,15 @@ export default function HomeScreen() {
           style={({ pressed }) => [
             styles.syncButton,
             {
-              backgroundColor: tintColor,
+              backgroundColor: '#f0f0f0',
               opacity: pressed || syncing ? 0.7 : 1,
             },
           ]}
         >
           {syncing ? (
-            <ActivityIndicator color="#fff" size="small" />
+            <ActivityIndicator color={tintColor} size="small" />
           ) : (
-            <ThemedText style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>
+            <ThemedText style={{ color: '#333', fontSize: 12, fontWeight: '600' }}>
               Sincronizare
             </ThemedText>
           )}
