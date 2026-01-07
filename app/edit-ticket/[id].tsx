@@ -71,7 +71,7 @@ export default function EditTicketScreen() {
   const tintColor = useThemeColor({}, 'tint');
   const secondaryTextColor = useThemeColor({}, 'textSecondary');
   const backgroundColor = useThemeColor({}, 'background');
-  const buttonBgColor = useThemeColor({}, 'border');
+  const buttonBgColor = useThemeColor({}, 'buttonBg');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

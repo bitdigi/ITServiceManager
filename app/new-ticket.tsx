@@ -90,7 +90,7 @@ export default function NewTicketScreen() {
   const tintColor = useThemeColor({}, 'tint');
   const surfaceColor = useThemeColor({}, 'surface');
   const secondaryTextColor = useThemeColor({}, 'textSecondary');
-  const buttonBgColor = useThemeColor({}, 'border');
+  const buttonBgColor = useThemeColor({}, 'buttonBg');
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(false);

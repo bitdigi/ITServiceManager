@@ -14,6 +14,8 @@ const dangerRed = "#DC143C";
 const lightGray = "#F8F9FA";
 const mediumGray = "#666666";
 const borderGray = "#E0E0E0";
+const buttonBgLight = "#E8E8E8";
+const buttonBgDark = "#2A2A2A";
 
 export const Colors = {
   light: {
@@ -26,6 +28,7 @@ export const Colors = {
     surface: "#FFFFFF",
     textSecondary: mediumGray,
     border: borderGray,
+    buttonBg: buttonBgLight,
     success: successGreen,
     warning: alertOrange,
     danger: dangerRed,
@@ -40,6 +43,7 @@ export const Colors = {
     surface: "#1E1E1E",
     textSecondary: "#A0A0A0",
     border: "#333333",
+    buttonBg: buttonBgDark,
     success: successGreen,
     warning: alertOrange,
     danger: dangerRed,
