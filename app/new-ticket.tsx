@@ -245,7 +245,7 @@ export default function NewTicketScreen() {
                 >
                   <ThemedText
                     style={{
-                      color: productType === type.value ? '#fff' : '#333',
+                      color: productType === type.value ? '#fff' : textColor,
                       fontSize: 12,
                       fontWeight: '500',
                     }}
@@ -339,7 +339,7 @@ export default function NewTicketScreen() {
                 >
                   <ThemedText
                     style={{
-                      color: status === s ? '#fff' : '#333',
+                      color: status === s ? '#fff' : textColor,
                       fontSize: 11,
                       fontWeight: '500',
                     }}
