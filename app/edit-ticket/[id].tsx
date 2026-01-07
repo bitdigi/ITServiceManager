@@ -61,9 +61,11 @@ export default function EditTicketScreen() {
   const [dateReceived, setDateReceived] = useState(new Date());
   const [dateDelivered, setDateDelivered] = useState<Date | null>(null);
 
+  // Get theme colors - moved outside of conditional rendering
   const textColor = useThemeColor({}, 'text');
   const borderColor = useThemeColor({}, 'border');
   const tintColor = useThemeColor({}, 'tint');
+  const secondaryTextColor = useThemeColor({}, 'textSecondary');
 
   useEffect(() => {
     loadTicket();
