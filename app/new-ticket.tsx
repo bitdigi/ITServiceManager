@@ -12,6 +12,7 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Text,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -243,7 +244,7 @@ export default function NewTicketScreen() {
                     },
                   ]}
                 >
-                  <ThemedText
+                  <Text
                     style={{
                       color: productType === type.value ? '#fff' : '#333333',
                       fontSize: 12,
@@ -252,7 +253,7 @@ export default function NewTicketScreen() {
                     numberOfLines={1}
                   >
                     {type.label}
-                  </ThemedText>
+                  </Text>
                 </Pressable>
               ))}
             </ScrollView>
@@ -337,7 +338,7 @@ export default function NewTicketScreen() {
                     },
                   ]}
                 >
-                  <ThemedText
+                  <Text
                     style={{
                       color: status === s ? '#fff' : '#333333',
                       fontSize: 11,
@@ -346,7 +347,7 @@ export default function NewTicketScreen() {
                     numberOfLines={1}
                   >
                     {s === 'pending' ? 'În așteptare' : s === 'in_progress' ? 'În curs' : s === 'completed' ? 'Finalizat' : 'Suspendat'}
-                  </ThemedText>
+                  </Text>
                 </Pressable>
               ))}
             </View>
