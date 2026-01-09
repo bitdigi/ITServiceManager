@@ -82,3 +82,19 @@
 - Responsive design for mobile portrait orientation (9:16)
 - Dark mode support implemented
 - Empty states handled (no tickets, no data)
+- Auto-sync from Telegram on app launch implemented
+- Tickets synced via JSON data embedded in Telegram messages
+- Duplicate detection prevents importing same ticket twice
+
+
+## Phase 9: Multi-Device Synchronization
+- [x] Implement auto-sync from Telegram on app launch
+- [ ] Add periodic background sync (every 5-10 minutes)
+- [x] Handle duplicate tickets from sync
+- [x] Show sync status indicator on Home screen
+- [ ] Test sync between multiple devices (pending user testing)
+
+## Known Issues & Fixes
+- [x] ISSUE: Fișele nu se sincronizează automat între telefoane
+  - Cauza: Fiecare telefon are stocare locală independentă
+  - Soluție: Implementare sincronizare automată din Telegram la lansare app - REZOLVAT

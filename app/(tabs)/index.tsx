@@ -24,6 +24,7 @@ import { useTickets } from '@/hooks/use-tickets';
 import { ServiceTicket, TicketStatus } from '@/types/ticket';
 import { getDashboardStats } from '@/lib/reports';
 import { syncTicketsFromTelegram } from '@/lib/telegram-sync';
+import { syncTicketsFromTelegramAuto } from '@/lib/telegram';
 import { useSettings } from '@/hooks/use-settings';
 
 interface DashboardStats {
@@ -70,6 +71,24 @@ export default function HomeScreen() {
   const surfaceColor = useThemeColor({}, 'surface');
   const secondaryTextColor = useThemeColor({}, 'textSecondary');
 
+  // Auto-sync from Telegram on app launch
+  useEffect(() => {
+    const autoSync = async () => {
+      if (settings?.telegramConfig?.botToken && settings?.telegramConfig?.groupId) {
+        try {
+          const result = await syncTicketsFromTelegramAuto();
+          if (result.success && result.imported > 0) {
+            console.log(`Auto-synced ${result.imported} tickets from Telegram`);
+            await loadTickets();
+          }
+        } catch (error) {
+          console.error('Auto-sync error:', error);
+        }
+      }
+    };
+    autoSync();
+  }, []);
+
   // Load dashboard stats
   useEffect(() => {
     const loadStats = async () => {
@@ -105,15 +124,12 @@ export default function HomeScreen() {
 
     try {
       setSyncing(true);
-      const result = await syncTicketsFromTelegram(
-        settings.telegramConfig.botToken,
-        settings.telegramConfig.groupId
-      );
+      const result = await syncTicketsFromTelegramAuto();
 
       if (result.success) {
         // Reload tickets after sync
         await loadTickets();
-        Alert.alert('Succes', `${result.count} fișe sincronizate de pe Telegram`);
+        Alert.alert('Succes', `${result.imported} fișe sincronizate de pe Telegram`);
       } else {
         Alert.alert('Eroare', result.error || 'Eroare la sincronizare');
       }
@@ -127,9 +143,9 @@ export default function HomeScreen() {
   const getStatusColor = (status: TicketStatus): string => {
     const colors: Record<TicketStatus, string> = {
       pending: '#FFA500',
-      in_progress: tintColor,
-      completed: '#00A86B',
-      on_hold: '#FF6B35',
+      in_progress: '#0066CC',
+      completed: '#00AA00',
+      on_hold: '#FF6666',
     };
     return colors[status];
   };
@@ -146,76 +162,54 @@ export default function HomeScreen() {
 
   const renderTicketCard = ({ item }: { item: ServiceTicket }) => (
     <Pressable
-      onPress={() => router.push(`/ticket-detail/${item.id}` as any)}
-      style={({ pressed }) => [
+      onPress={() => router.push({ pathname: '/ticket-detail' as any, params: { id: item.id } })}
+      style={[
         styles.ticketCard,
         {
+          borderColor: borderColor,
           backgroundColor: surfaceColor,
-          borderColor,
-          opacity: pressed ? 0.7 : 1,
         },
       ]}
     >
       <View style={styles.ticketHeader}>
-        <View style={styles.ticketInfo}>
-          <ThemedText type="defaultSemiBold" style={{ color: textColor }}>
+        <View style={{ flex: 1 }}>
+          <ThemedText type="defaultSemiBold" numberOfLines={1}>
             {item.clientName}
           </ThemedText>
-          <ThemedText style={{ color: secondaryTextColor, fontSize: 12 }}>
+          <ThemedText style={{ fontSize: 12, color: secondaryTextColor, marginTop: 4 }}>
             {item.productModel}
           </ThemedText>
         </View>
         <View
           style={[
             styles.statusBadge,
-            { backgroundColor: getStatusColor(item.status) },
+            {
+              backgroundColor: getStatusColor(item.status),
+            },
           ]}
         >
-          <ThemedText style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}>
+          <ThemedText style={{ color: '#fff', fontSize: 10, fontWeight: '600' }}>
             {getStatusLabel(item.status)}
           </ThemedText>
         </View>
       </View>
 
-        <View style={styles.ticketDetails}>
-          <View style={styles.detailRow}>
-            <ThemedText style={{ fontSize: 12, color: secondaryTextColor }}>
-              {TRANSLATIONS.phone}
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, fontWeight: '500', color: textColor }}>
-              {item.clientPhone}
-            </ThemedText>
-          </View>
-          <View style={styles.detailRow}>
-            <ThemedText style={{ fontSize: 12, color: secondaryTextColor }}>
-              {TRANSLATIONS.cost}
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, fontWeight: '600', color: tintColor }}>
-              {item.cost} RON
-            </ThemedText>
-          </View>
-        </View>
+      <View style={styles.ticketDetails}>
+        <ThemedText style={{ fontSize: 12, color: secondaryTextColor }}>
+          {TRANSLATIONS.phone} {item.clientPhone}
+        </ThemedText>
+        <ThemedText style={{ fontSize: 12, color: secondaryTextColor, marginTop: 4 }}>
+          {TRANSLATIONS.cost} {item.cost} RON
+        </ThemedText>
+      </View>
 
-        <View style={styles.ticketFooter}>
-          <ThemedText style={{ fontSize: 11, color: secondaryTextColor }}>
-            {new Date(item.dateReceived).toLocaleDateString('ro-RO')}
-          </ThemedText>
-          {item.telegramSent && (
-            <ThemedText style={{ fontSize: 11, color: '#00A86B' }}>
-              {TRANSLATIONS.sentTelegram}
-            </ThemedText>
-          )}
-        </View>
+      {item.telegramSent && (
+        <ThemedText style={{ fontSize: 11, color: '#00AA00', marginTop: 8 }}>
+          {TRANSLATIONS.sentTelegram}
+        </ThemedText>
+      )}
     </Pressable>
   );
-
-  if (loading) {
-    return (
-      <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={tintColor} />
-      </ThemedView>
-    );
-  }
 
   return (
     <ThemedView
@@ -233,61 +227,91 @@ export default function HomeScreen() {
       </View>
 
       {/* Dashboard Stats */}
-      {stats && (
-        <View style={[styles.statsContainer, { backgroundColor: surfaceColor, borderColor }]}>
-          <View style={styles.statItem}>
-            <ThemedText type="defaultSemiBold" style={{ color: tintColor }}>
-              {stats.totalTickets}
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, color: secondaryTextColor }}>
-              {TRANSLATIONS.totalTickets}
-            </ThemedText>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <ThemedText type="defaultSemiBold" style={{ color: '#00A86B' }}>
-              {stats.completedTickets}
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, color: secondaryTextColor }}>
-              {TRANSLATIONS.completedTickets}
-            </ThemedText>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <ThemedText type="defaultSemiBold" style={{ color: '#FF6B35' }}>
-              {stats.pendingTickets}
-            </ThemedText>
-            <ThemedText style={{ fontSize: 12, color: secondaryTextColor }}>
-              {TRANSLATIONS.pendingTickets}
-            </ThemedText>
-          </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.statsContainer}
+        contentContainerStyle={{ paddingHorizontal: 16 }}
+      >
+        <View
+          style={[
+            styles.statCard,
+            {
+              borderColor: borderColor,
+              backgroundColor: surfaceColor,
+            },
+          ]}
+        >
+          <ThemedText type="defaultSemiBold" style={{ fontSize: 20, color: tintColor }}>
+            {stats?.totalTickets || 0}
+          </ThemedText>
+          <ThemedText style={{ fontSize: 12, color: secondaryTextColor, marginTop: 4 }}>
+            {TRANSLATIONS.totalTickets}
+          </ThemedText>
         </View>
-      )}
 
-      {/* Search Bar and Sync Button */}
-      <View style={styles.searchAndSyncContainer}>
-        <View style={[styles.searchContainer, { borderColor, flex: 1 }]}>
-          <TextInput
-            style={[styles.searchInput, { color: textColor }]}
-            placeholder={TRANSLATIONS.search}
-            placeholderTextColor={secondaryTextColor}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
+        <View
+          style={[
+            styles.statCard,
+            {
+              borderColor: borderColor,
+              backgroundColor: surfaceColor,
+            },
+          ]}
+        >
+          <ThemedText type="defaultSemiBold" style={{ fontSize: 20, color: '#00AA00' }}>
+            {stats?.completedTickets || 0}
+          </ThemedText>
+          <ThemedText style={{ fontSize: 12, color: secondaryTextColor, marginTop: 4 }}>
+            {TRANSLATIONS.completedTickets}
+          </ThemedText>
         </View>
+
+        <View
+          style={[
+            styles.statCard,
+            {
+              borderColor: borderColor,
+              backgroundColor: surfaceColor,
+            },
+          ]}
+        >
+          <ThemedText type="defaultSemiBold" style={{ fontSize: 20, color: '#FFA500' }}>
+            {stats?.pendingTickets || 0}
+          </ThemedText>
+          <ThemedText style={{ fontSize: 12, color: secondaryTextColor, marginTop: 4 }}>
+            {TRANSLATIONS.pendingTickets}
+          </ThemedText>
+        </View>
+      </ScrollView>
+
+      {/* Search and Sync */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={[
+            styles.searchInput,
+            {
+              borderColor: borderColor,
+              color: textColor,
+            },
+          ]}
+          placeholder={TRANSLATIONS.search}
+          placeholderTextColor={secondaryTextColor}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
         <Pressable
           onPress={handleSync}
-          disabled={syncing || loading}
-          style={({ pressed }) => [
+          disabled={syncing}
+          style={[
             styles.syncButton,
             {
-              backgroundColor: '#f0f0f0',
-              opacity: pressed || syncing ? 0.7 : 1,
+              backgroundColor: syncing ? '#ccc' : '#f0f0f0',
             },
           ]}
         >
           {syncing ? (
-            <ActivityIndicator color={tintColor} size="small" />
+            <ActivityIndicator size="small" color="#333" />
           ) : (
             <ThemedText style={{ color: '#333', fontSize: 12, fontWeight: '600' }}>
               Sincronizare
@@ -296,40 +320,52 @@ export default function HomeScreen() {
         </Pressable>
       </View>
 
-      {/* Ticket List */}
-      {filteredTickets.length > 0 ? (
+      {/* Tickets List */}
+      {loading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={tintColor} />
+        </View>
+      ) : filteredTickets.length === 0 ? (
+        <View style={styles.centerContainer}>
+          <ThemedText type="subtitle" style={{ textAlign: 'center' }}>
+            {searchQuery ? TRANSLATIONS.noResults : TRANSLATIONS.noTickets}
+          </ThemedText>
+          {!searchQuery && (
+            <ThemedText
+              style={{
+                textAlign: 'center',
+                color: secondaryTextColor,
+                marginTop: 12,
+                fontSize: 14,
+              }}
+            >
+              {TRANSLATIONS.addNew}
+            </ThemedText>
+          )}
+        </View>
+      ) : (
         <FlatList
           data={filteredTickets}
-          keyExtractor={item => item.id}
           renderItem={renderTicketCard}
-          scrollEnabled={true}
-          removeClippedSubviews={true}
-          maxToRenderPerBatch={10}
-          updateCellsBatchingPeriod={50}
+          keyExtractor={item => item.id}
           contentContainerStyle={styles.listContent}
+          scrollEnabled={false}
         />
-      ) : (
-        <View style={styles.emptyState}>
-          <ThemedText type="subtitle">{TRANSLATIONS.noTickets}</ThemedText>
-          <ThemedText style={{ color: secondaryTextColor, marginTop: 8 }}>
-            {searchQuery ? TRANSLATIONS.noResults : TRANSLATIONS.addNew}
-          </ThemedText>
-        </View>
       )}
 
-      {/* Floating Action Button */}
+      {/* FAB Button */}
       <Pressable
-        onPress={() => router.push('/new-ticket')}
-        style={({ pressed }) => [
+        onPress={() => router.push('/new-ticket' as any)}
+        style={[
           styles.fab,
           {
             backgroundColor: tintColor,
-            opacity: pressed ? 0.8 : 1,
-            bottom: insets.bottom + 70,
           },
         ]}
       >
-        <ThemedText style={{ color: '#fff', fontSize: 28, fontWeight: '300' }}>+</ThemedText>
+        <ThemedText style={{ color: '#fff', fontSize: 28, fontWeight: '300' }}>
+          +
+        </ThemedText>
       </Pressable>
     </ThemedView>
   );
@@ -338,55 +374,54 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
   },
   header: {
-    marginBottom: 20,
+    paddingHorizontal: 16,
+    marginBottom: 16,
   },
   statsContainer: {
-    flexDirection: 'row',
-    borderRadius: 12,
+    marginBottom: 16,
+  },
+  statCard: {
     borderWidth: 1,
-    padding: 12,
-    marginBottom: 16,
-    justifyContent: 'space-around',
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statDivider: {
-    width: 1,
-    backgroundColor: '#E0E0E0',
-  },
-  searchAndSyncContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    marginRight: 12,
+    minWidth: 100,
     alignItems: 'center',
   },
   searchContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
     height: 44,
-    justifyContent: 'center',
   },
   syncButton: {
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 12,
-    height: 44,
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 100,
+    height: 44,
   },
-  searchInput: {
-    fontSize: 16,
-    height: '100%',
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
   },
   listContent: {
-    paddingBottom: 100,
+    paddingHorizontal: 16,
   },
   ticketCard: {
     borderWidth: 1,
@@ -400,39 +435,18 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 8,
   },
-  ticketInfo: {
-    flex: 1,
-  },
   statusBadge: {
+    borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
-    marginLeft: 8,
   },
   ticketDetails: {
-    marginBottom: 8,
-    gap: 4,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  ticketFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginTop: 8,
   },
   fab: {
     position: 'absolute',
-    right: 16,
+    bottom: 24,
+    right: 24,
     width: 56,
     height: 56,
     borderRadius: 28,
