@@ -21,6 +21,7 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { useTickets } from '@/hooks/use-tickets';
 import { ServiceTicket, TicketStatus, ProductType } from '@/types/ticket';
 import { sendTicketToTelegram, deleteMessageFromTelegram } from '@/lib/telegram';
+import { printLabel } from '@/lib/thermal-printer';
 
 const PRODUCT_NAMES: Record<ProductType, string> = {
   laptop: 'Laptop',
@@ -37,6 +38,10 @@ const TRANSLATIONS = {
   back: '← Înapoi',
   edit: 'Editează',
   delete: 'Șterge',
+  print: 'Imprimă',
+  printing: 'Se imprimă...',
+  printSuccess: 'Etichetă tipărită cu succes',
+  printError: 'Eroare la imprimare',
   clientInfo: 'Informații Client',
   name: 'Nume',
   phone: 'Telefon',
@@ -96,6 +101,7 @@ export default function TicketDetailScreen() {
   const [ticket, setTicket] = useState<ServiceTicket | null>(null);
   const [loading, setLoading] = useState(true);
   const [resendingTelegram, setResendingTelegram] = useState(false);
+  const [printing, setPrinting] = useState(false);
 
   const textColor = useThemeColor({}, 'text');
   const tintColor = useThemeColor({}, 'tint');
@@ -184,6 +190,25 @@ export default function TicketDetailScreen() {
     }
   };
 
+  const handlePrint = async () => {
+    if (!ticket) return;
+
+    try {
+      setPrinting(true);
+      const result = await printLabel(ticket);
+
+      if (result.success) {
+        Alert.alert('Succes', TRANSLATIONS.printSuccess);
+      } else {
+        Alert.alert('Eroare', result.error || TRANSLATIONS.printError);
+      }
+    } catch (error) {
+      Alert.alert('Eroare', error instanceof Error ? error.message : TRANSLATIONS.printError);
+    } finally {
+      setPrinting(false);
+    }
+  };
+
   if (loading) {
     return (
       <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
@@ -222,6 +247,17 @@ export default function TicketDetailScreen() {
               style={styles.headerButton}
             >
               <ThemedText style={{ color: tintColor, fontSize: 14 }}>{TRANSLATIONS.edit}</ThemedText>
+            </Pressable>
+            <Pressable
+              onPress={handlePrint}
+              disabled={printing}
+              style={styles.headerButton}
+            >
+              {printing ? (
+                <ActivityIndicator size="small" color={tintColor} />
+              ) : (
+                <ThemedText style={{ color: tintColor, fontSize: 14 }}>{TRANSLATIONS.print}</ThemedText>
+              )}
             </Pressable>
             <Pressable onPress={handleDelete} style={styles.headerButton}>
               <ThemedText style={{ color: dangerColor, fontSize: 14 }}>{TRANSLATIONS.delete}</ThemedText>
