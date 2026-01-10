@@ -162,7 +162,7 @@ export default function HomeScreen() {
 
   const renderTicketCard = ({ item }: { item: ServiceTicket }) => (
     <Pressable
-      onPress={() => router.push({ pathname: '/ticket-detail' as any, params: { id: item.id } })}
+      onPress={() => router.push(`/ticket-detail/${item.id}` as any)}
       style={[
         styles.ticketCard,
         {
