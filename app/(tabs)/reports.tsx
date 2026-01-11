@@ -11,6 +11,7 @@ import {
   View,
   ActivityIndicator,
   FlatList,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,8 +23,14 @@ import {
   generateTechnicianReport,
   generateProductReport,
   getDashboardStats,
+  getAllTickets,
 } from '@/lib/reports';
 import { RevenueReport, TechnicianReport, ProductReport } from '@/types/ticket';
+import {
+  generateDailyReportPDF,
+  generateTechnicianReportPDF,
+  generateProductReportPDF,
+} from '@/lib/pdf-export';
 
 type ReportTab = 'revenue' | 'technician' | 'product';
 
@@ -60,6 +67,7 @@ export default function ReportsScreen() {
   const [revenueReport, setRevenueReport] = useState<RevenueReport | null>(null);
   const [technicianReports, setTechnicianReports] = useState<TechnicianReport[]>([]);
   const [productReports, setProductReports] = useState<ProductReport[]>([]);
+  const [exporting, setExporting] = useState(false);
 
   const textColor = useThemeColor({}, 'text');
   const tintColor = useThemeColor({}, 'tint');
@@ -94,6 +102,57 @@ export default function ReportsScreen() {
       console.error('Error loading reports:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportDaily = async () => {
+    try {
+      setExporting(true);
+      const tickets = await getAllTickets();
+      const result = await generateDailyReportPDF(tickets, new Date().toISOString());
+      if (result.success) {
+        Alert.alert('Succes', 'Raportul zilei a fost exportat cu succes!');
+      } else {
+        Alert.alert('Eroare', result.error || 'Eroare la export');
+      }
+    } catch (error) {
+      Alert.alert('Eroare', error instanceof Error ? error.message : 'Eroare la export');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportTechnician = async (technicianName: string) => {
+    try {
+      setExporting(true);
+      const tickets = await getAllTickets();
+      const result = await generateTechnicianReportPDF(tickets, technicianName);
+      if (result.success) {
+        Alert.alert('Succes', `Raportul pentru ${technicianName} a fost exportat cu succes!`);
+      } else {
+        Alert.alert('Eroare', result.error || 'Eroare la export');
+      }
+    } catch (error) {
+      Alert.alert('Eroare', error instanceof Error ? error.message : 'Eroare la export');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportProduct = async (productType: string) => {
+    try {
+      setExporting(true);
+      const tickets = await getAllTickets();
+      const result = await generateProductReportPDF(tickets, productType);
+      if (result.success) {
+        Alert.alert('Succes', `Raportul pentru ${productType} a fost exportat cu succes!`);
+      } else {
+        Alert.alert('Eroare', result.error || 'Eroare la export');
+      }
+    } catch (error) {
+      Alert.alert('Eroare', error instanceof Error ? error.message : 'Eroare la export');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -145,33 +204,49 @@ export default function ReportsScreen() {
       ) : (
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           {activeTab === 'revenue' && revenueReport && (
-            <RevenueReportView report={revenueReport} />
+            <RevenueReportView report={revenueReport} onExport={handleExportDaily} />
           )}
 
           {activeTab === 'technician' && (
-            <TechnicianReportView reports={technicianReports} />
+            <TechnicianReportView reports={technicianReports} onExport={handleExportTechnician} />
           )}
 
           {activeTab === 'product' && (
-            <ProductReportView reports={productReports} />
+            <ProductReportView reports={productReports} onExport={handleExportProduct} />
           )}
 
           <View style={{ height: 24 }} />
         </ScrollView>
       )}
 
-      {/* Refresh Button */}
-      <Pressable
-        onPress={loadReports}
-        style={[styles.refreshButton, { backgroundColor: tintColor }]}
-      >
-        <ThemedText style={{ color: '#fff', fontWeight: '600' }}>{TRANSLATIONS.refresh}</ThemedText>
-      </Pressable>
+      {/* Action Buttons */}
+      <View style={styles.buttonContainer}>
+        <Pressable
+          onPress={loadReports}
+          disabled={exporting}
+          style={[styles.actionButton, { backgroundColor: tintColor, opacity: exporting ? 0.6 : 1 }]}
+        >
+          <ThemedText style={{ color: '#fff', fontWeight: '600' }}>{TRANSLATIONS.refresh}</ThemedText>
+        </Pressable>
+        {activeTab === 'revenue' && (
+          <Pressable
+            onPress={handleExportDaily}
+            disabled={exporting}
+            style={[styles.actionButton, { backgroundColor: tintColor, opacity: exporting ? 0.6 : 1 }]}
+          >
+            {exporting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <ThemedText style={{ color: '#fff', fontWeight: '600' }}>Export PDF</ThemedText>
+            )}
+          </Pressable>
+        )}
+      </View>
     </ThemedView>
   );
 }
 
-function RevenueReportView({ report }: { report: RevenueReport }) {
+function RevenueReportView({ report, onExport }: { report: RevenueReport; onExport?: () => void }) {
   const textColor = useThemeColor({}, 'text');
   const surfaceColor = useThemeColor({}, 'surface');
   const borderColor = useThemeColor({}, 'border');
@@ -249,7 +324,7 @@ function RevenueReportView({ report }: { report: RevenueReport }) {
   );
 }
 
-function TechnicianReportView({ reports }: { reports: TechnicianReport[] }) {
+function TechnicianReportView({ reports, onExport }: { reports: TechnicianReport[]; onExport?: (name: string) => void }) {
   const surfaceColor = useThemeColor({}, 'surface');
   const borderColor = useThemeColor({}, 'border');
   const secondaryTextColor = useThemeColor({}, 'textSecondary');
@@ -312,7 +387,7 @@ function TechnicianReportView({ reports }: { reports: TechnicianReport[] }) {
   );
 }
 
-function ProductReportView({ reports }: { reports: ProductReport[] }) {
+function ProductReportView({ reports, onExport }: { reports: ProductReport[]; onExport?: (type: string) => void }) {
   const surfaceColor = useThemeColor({}, 'surface');
   const borderColor = useThemeColor({}, 'border');
   const secondaryTextColor = useThemeColor({}, 'textSecondary');
@@ -437,5 +512,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 12,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  actionButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

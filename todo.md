@@ -111,3 +111,22 @@
 - [x] Format label with: ID, client phone, received date, problem description
 - [ ] Test printing on Sunmi T2S device (pending user testing)
 - [x] Handle printer errors and status
+
+
+## Phase 11: Advanced Search & Filters
+- [x] Create advanced search component with filters
+- [x] Implement filter by status (pending, in_progress, completed, on_hold)
+- [x] Implement filter by technician
+- [x] Implement filter by date range
+- [x] Add search by client name and phone
+- [x] Add clear filters button
+- [ ] Show active filter count on Home screen (pending UI update)
+
+## Phase 12: PDF Report Export
+- [x] Install PDF generation library (expo-print)
+- [x] Create PDF report generator service
+- [x] Implement export for daily reports
+- [x] Implement export for technician reports
+- [x] Implement export for product type reports
+- [x] Add export button to Reports screen
+- [x] Handle PDF file saving and sharing

@@ -26,6 +26,8 @@ import { getDashboardStats } from '@/lib/reports';
 import { syncTicketsFromTelegram } from '@/lib/telegram-sync';
 import { syncTicketsFromTelegramAuto } from '@/lib/telegram';
 import { useSettings } from '@/hooks/use-settings';
+import { AdvancedSearch, SearchFilters } from '@/components/advanced-search';
+import { getAllTechnicianNames } from '@/lib/reports';
 
 interface DashboardStats {
   totalTickets: number;
@@ -33,6 +35,14 @@ interface DashboardStats {
   pendingTickets: number;
   todayTickets: number;
   totalRevenue: number;
+}
+
+interface FilterState {
+  searchText: string;
+  status: TicketStatus | 'all';
+  technician: string;
+  startDate: string;
+  endDate: string;
 }
 
 // Romanian translations for Home Screen
@@ -48,6 +58,8 @@ const TRANSLATIONS = {
   phone: 'Telefon:',
   cost: 'Cost:',
   sentTelegram: '✓ Trimis pe Telegram',
+  filters: 'Filtre',
+  activeFilters: 'Filtre active',
   pending: 'În așteptare',
   inProgress: 'În curs',
   completed: 'Finalizat',
@@ -63,6 +75,15 @@ export default function HomeScreen() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [filteredTickets, setFilteredTickets] = useState<ServiceTicket[]>([]);
   const [syncing, setSyncing] = useState(false);
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    searchText: '',
+    status: 'all',
+    technician: '',
+    startDate: '',
+    endDate: '',
+  });
+  const [technicians, setTechnicians] = useState<string[]>([]);
 
   const backgroundColor = useThemeColor({}, 'background');
   const textColor = useThemeColor({}, 'text');
@@ -158,6 +179,11 @@ export default function HomeScreen() {
       on_hold: TRANSLATIONS.onHold,
     };
     return labels[status];
+  };
+
+  const handleApplyFilters = (newFilters: SearchFilters) => {
+    setFilters(newFilters);
+    setSearchQuery(newFilters.searchText);
   };
 
   const renderTicketCard = ({ item }: { item: ServiceTicket }) => (
@@ -301,6 +327,19 @@ export default function HomeScreen() {
           onChangeText={setSearchQuery}
         />
         <Pressable
+          onPress={() => setShowAdvancedSearch(true)}
+          style={[
+            styles.syncButton,
+            {
+              backgroundColor: '#f0f0f0',
+            },
+          ]}
+        >
+          <ThemedText style={{ color: '#333', fontSize: 12, fontWeight: '600' }}>
+            {TRANSLATIONS.filters}
+          </ThemedText>
+        </Pressable>
+        <Pressable
           onPress={handleSync}
           disabled={syncing}
           style={[
@@ -319,6 +358,15 @@ export default function HomeScreen() {
           )}
         </Pressable>
       </View>
+
+      {/* Advanced Search Modal */}
+      <AdvancedSearch
+        visible={showAdvancedSearch}
+        onClose={() => setShowAdvancedSearch(false)}
+        onApply={handleApplyFilters}
+        technicians={technicians}
+        initialFilters={filters}
+      />
 
       {/* Tickets List */}
       {loading ? (

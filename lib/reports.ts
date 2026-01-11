@@ -240,6 +240,13 @@ export async function getAllTechnicianNames(): Promise<string[]> {
 }
 
 /**
+ * Get all tickets
+ */
+export async function getAllTickets(): Promise<ServiceTicket[]> {
+  return ticketStorage.getAllTickets();
+}
+
+/**
  * Get dashboard statistics
  */
 export async function getDashboardStats() {
