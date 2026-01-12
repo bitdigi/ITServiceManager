@@ -162,3 +162,21 @@
 - Supports: printLabel, printTestLabel, printMultipleLabels, getPrinterStatus
 - Updated ticket-detail screen to use Sunmi printer
 - QR code included on all printed labels
+
+
+## Phase 15: Optimize Thermal Label Design
+- [x] Redesign label layout for better readability
+- [x] Optimize font sizes and spacing for 62mm x 50mm
+- [x] Add QR code in optimal position
+- [x] Improve visual hierarchy (ID, phone, date, defect)
+- [ ] Test printed label quality on Sunmi T2S (pending user testing)
+
+## Optimized Label Design:
+- Header: Centered, bold, double height "FIȘĂ SERVICE"
+- Thick separator (═══) for visual separation
+- Info section: Bold labels (ID, TEL, DATA) with normal values
+- Thin separator (───) between sections
+- Defect: Bold label with problem description (max 40 chars)
+- QR code: Centered with fallback Telegram link
+- Clean spacing and alignment for professional look
+- ESC/POS commands for proper formatting on thermal printer

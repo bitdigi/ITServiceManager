@@ -2,6 +2,7 @@
  * Sunmi Native Printer Service
  * For Sunmi T2S AIO with integrated printer
  * Uses Sunmi PrinterService API directly (no Bluetooth required)
+ * Optimized label design for 62mm x 50mm thermal labels
  */
 
 import { NativeModules, Alert } from 'react-native';
@@ -34,51 +35,135 @@ function formatProductType(type: string): string {
 function formatDate(dateString: string): string {
   try {
     const date = new Date(dateString);
-    return date.toLocaleDateString('ro-RO');
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
   } catch {
     return dateString;
   }
 }
 
 /**
- * Generate label text for Sunmi printer (ESC/POS format)
- * Format optimized for 62mm x 50mm label
+ * Generate optimized label text for Sunmi printer (ESC/POS format)
+ * Format optimized for 62mm x 50mm label with clear visual hierarchy
+ * 
+ * Label Layout:
+ * ┌──────────────────────────┐
+ * │   FIȘĂ SERVICE           │
+ * │ ════════════════════════ │
+ * │ ID: ABC123               │
+ * │ TEL: 0712345678          │
+ * │ DATA: 12.01.2025         │
+ * │ ──────────────────────── │
+ * │ DEFECT:                  │
+ * │ Nu pornește...           │
+ * │ ──────────────────────── │
+ * │     [QR CODE]            │
+ * │ t.me/search?q=ABC123     │
+ * └──────────────────────────┘
  */
 function generateLabelText(ticket: ServiceTicket): string {
   const ticketId = ticket.id.substring(0, 8).toUpperCase();
   const clientPhone = ticket.clientPhone;
   const receivedDate = formatDate(ticket.dateReceived);
-  const problem = ticket.problemDescription.substring(0, 30);
+  const problem = ticket.problemDescription.length > 40 
+    ? ticket.problemDescription.substring(0, 37) + '...' 
+    : ticket.problemDescription;
 
   // ESC/POS commands for thermal printer
   const ESC = '\x1B';
+  const GS = '\x1D';
+  
+  // Alignment
   const ALIGN_CENTER = ESC + 'a' + '\x01';
   const ALIGN_LEFT = ESC + 'a' + '\x00';
+  
+  // Text formatting
   const BOLD_ON = ESC + 'E' + '\x01';
   const BOLD_OFF = ESC + 'E' + '\x00';
+  const DOUBLE_HEIGHT = GS + '!' + '\x01'; // Double height
+  const NORMAL_SIZE = GS + '!' + '\x00';   // Normal size
+  
+  // Separators
   const FEED_LINE = '\n';
-  const SEPARATOR = '═══════════════\n';
+  const THICK_SEP = '════════════════════════\n';
+  const THIN_SEP = '────────────────────────\n';
 
-  let label = `${ALIGN_CENTER}${BOLD_ON}FIȘĂ SERVICE${BOLD_OFF}${FEED_LINE}`;
-  label += `${ALIGN_LEFT}ID: ${ticketId}${FEED_LINE}`;
-  label += `${FEED_LINE}`;
-  label += `TEL: ${clientPhone}${FEED_LINE}`;
-  label += `${FEED_LINE}`;
-  label += `DATA: ${receivedDate}${FEED_LINE}`;
-  label += `${FEED_LINE}`;
-  label += `DEFECT:${FEED_LINE}`;
-  label += `${problem}...${FEED_LINE}`;
-  label += `${FEED_LINE}`;
-
-  // Add QR code reference
+  // Build label with optimized layout
+  let label = '';
+  
+  // Header - centered, bold, double height
+  label += ALIGN_CENTER;
+  label += BOLD_ON;
+  label += DOUBLE_HEIGHT;
+  label += 'FIȘĂ SERVICE';
+  label += NORMAL_SIZE;
+  label += BOLD_OFF;
+  label += FEED_LINE;
+  
+  // Thick separator
+  label += THICK_SEP;
+  label += FEED_LINE;
+  
+  // Ticket info - left aligned, normal size
+  label += ALIGN_LEFT;
+  label += BOLD_ON;
+  label += 'ID: ';
+  label += BOLD_OFF;
+  label += ticketId;
+  label += FEED_LINE;
+  label += FEED_LINE;
+  
+  label += BOLD_ON;
+  label += 'TEL: ';
+  label += BOLD_OFF;
+  label += clientPhone;
+  label += FEED_LINE;
+  label += FEED_LINE;
+  
+  label += BOLD_ON;
+  label += 'DATA: ';
+  label += BOLD_OFF;
+  label += receivedDate;
+  label += FEED_LINE;
+  label += FEED_LINE;
+  
+  // Thin separator
+  label += THIN_SEP;
+  label += FEED_LINE;
+  
+  // Defect description
+  label += BOLD_ON;
+  label += 'DEFECT:';
+  label += BOLD_OFF;
+  label += FEED_LINE;
+  label += problem;
+  label += FEED_LINE;
+  label += FEED_LINE;
+  
+  // Thin separator
+  label += THIN_SEP;
+  label += FEED_LINE;
+  
+  // QR code reference - centered
+  label += ALIGN_CENTER;
   const qrData = generateQRCodeForPrinter(ticket);
-  label += `${ALIGN_CENTER}[QR CODE]${FEED_LINE}`;
-  label += `${qrData.value}${FEED_LINE}`;
+  label += '[QR CODE]';
+  label += FEED_LINE;
+  label += FEED_LINE;
+  
+  // Telegram fallback link - small text, centered
   if (qrData.fallbackUrl) {
-    label += `${FEED_LINE}Telegram:${FEED_LINE}${qrData.fallbackUrl}${FEED_LINE}`;
+    // Extract just the search part for cleaner display
+    const shortLink = qrData.fallbackUrl.replace('https://', '');
+    label += shortLink;
+    label += FEED_LINE;
   }
-
-  label += `${ALIGN_CENTER}${SEPARATOR}${FEED_LINE}${FEED_LINE}`;
+  
+  // Final spacing
+  label += FEED_LINE;
+  label += FEED_LINE;
 
   return label;
 }
@@ -177,18 +262,34 @@ export async function printTestLabel(): Promise<{
     }
 
     const ESC = '\x1B';
+    const GS = '\x1D';
     const ALIGN_CENTER = ESC + 'a' + '\x01';
     const BOLD_ON = ESC + 'E' + '\x01';
     const BOLD_OFF = ESC + 'E' + '\x00';
+    const DOUBLE_HEIGHT = GS + '!' + '\x01';
+    const NORMAL_SIZE = GS + '!' + '\x00';
     const FEED_LINE = '\n';
+    const SEPARATOR = '════════════════════════\n';
 
-    const testLabel = `${ALIGN_CENTER}${BOLD_ON}TEST IMPRIMARE${BOLD_OFF}${FEED_LINE}`;
-    testLabel.concat(`${FEED_LINE}`);
-    testLabel.concat(`Sunmi T2S - Imprimanta Integrata${FEED_LINE}`);
-    testLabel.concat(`Etichetă 62mm x 50mm${FEED_LINE}`);
-    testLabel.concat(`${FEED_LINE}`);
-    testLabel.concat(`═══════════════${FEED_LINE}`);
-    testLabel.concat(`${FEED_LINE}${FEED_LINE}`);
+    let testLabel = ALIGN_CENTER;
+    testLabel += BOLD_ON;
+    testLabel += DOUBLE_HEIGHT;
+    testLabel += 'TEST IMPRIMARE';
+    testLabel += NORMAL_SIZE;
+    testLabel += BOLD_OFF;
+    testLabel += FEED_LINE;
+    testLabel += SEPARATOR;
+    testLabel += FEED_LINE;
+    testLabel += 'Sunmi T2S';
+    testLabel += FEED_LINE;
+    testLabel += 'Imprimantă Integrată';
+    testLabel += FEED_LINE;
+    testLabel += 'Etichetă 62mm x 50mm';
+    testLabel += FEED_LINE;
+    testLabel += FEED_LINE;
+    testLabel += SEPARATOR;
+    testLabel += FEED_LINE;
+    testLabel += FEED_LINE;
 
     // Print test label
     if (SunmiPrinter.printText) {
