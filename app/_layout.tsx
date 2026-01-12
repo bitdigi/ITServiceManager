@@ -17,6 +17,9 @@ import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { trpc, createTRPCClient } from "@/lib/trpc";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/manus-runtime";
+import { useDeepLinkHandler } from "@/lib/deep-link-handler";
+import { useSettings } from "@/hooks/use-settings";
+import { useRouter } from "expo-router";
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -30,9 +33,14 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const initialInsets = initialWindowMetrics?.insets ?? DEFAULT_WEB_INSETS;
   const initialFrame = initialWindowMetrics?.frame ?? DEFAULT_WEB_FRAME;
+  const router = useRouter();
+  const { settings } = useSettings();
 
   const [insets, setInsets] = useState<EdgeInsets>(initialInsets);
   const [frame, setFrame] = useState<Rect>(initialFrame);
+
+  // Setup deep link handler for QR codes
+  useDeepLinkHandler(router, settings?.telegramConfig?.groupId);
 
   // Initialize Manus runtime for cookie injection from parent container
   useEffect(() => {

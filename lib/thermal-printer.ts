@@ -6,6 +6,7 @@
 
 import { ServiceTicket, ProductType } from '@/types/ticket';
 import RNThermalPrinter from 'react-native-thermal-printer';
+import { generateQRCodeForPrinter } from './qr-code';
 
 /**
  * Format product type for display
@@ -39,8 +40,9 @@ function formatDate(dateString: string): string {
 /**
  * Generate label text for thermal printer (ESC/POS format)
  * Format optimized for 62mm x 50mm label
+ * Includes QR code with deep link
  */
-function generateLabelText(ticket: ServiceTicket): string {
+function generateLabelText(ticket: ServiceTicket, includeQRCode: boolean = true): string {
   const ticketId = ticket.id.substring(0, 8).toUpperCase();
   const clientPhone = ticket.clientPhone;
   const receivedDate = formatDate(ticket.dateReceived);
@@ -56,7 +58,7 @@ function generateLabelText(ticket: ServiceTicket): string {
   const FEED_LINE = '\n';
   const SEPARATOR = '═══════════════\n';
 
-  const label = `${ALIGN_CENTER}${BOLD_ON}FIȘĂ SERVICE${BOLD_OFF}${FEED_LINE}
+  let label = `${ALIGN_CENTER}${BOLD_ON}FIȘĂ SERVICE${BOLD_OFF}${FEED_LINE}
 ${ALIGN_LEFT}ID: ${ticketId}${FEED_LINE}
 ${FEED_LINE}
 TEL: ${clientPhone}${FEED_LINE}
@@ -65,8 +67,19 @@ DATA: ${receivedDate}${FEED_LINE}
 ${FEED_LINE}
 DEFECT:${FEED_LINE}
 ${problem}...${FEED_LINE}
-${FEED_LINE}
-${ALIGN_CENTER}${SEPARATOR}${FEED_LINE}${FEED_LINE}`;
+${FEED_LINE}`;
+
+  // Add QR code reference if enabled
+  if (includeQRCode) {
+    const qrData = generateQRCodeForPrinter(ticket);
+    label += `${ALIGN_CENTER}[QR CODE]${FEED_LINE}`;
+    label += `${qrData.value}${FEED_LINE}`;
+    if (qrData.fallbackUrl) {
+      label += `${FEED_LINE}Telegram:${FEED_LINE}${qrData.fallbackUrl}${FEED_LINE}`;
+    }
+  }
+
+  label += `${ALIGN_CENTER}${SEPARATOR}${FEED_LINE}${FEED_LINE}`;
 
   return label;
 }

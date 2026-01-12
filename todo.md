@@ -130,3 +130,19 @@
 - [x] Implement export for product type reports
 - [x] Add export button to Reports screen
 - [x] Handle PDF file saving and sharing
+
+
+## Phase 13: QR Code on Thermal Labels
+- [x] Install QR code generation library (react-native-qrcode-svg)
+- [x] Create QR code generator service with deep link
+- [x] Add QR code to thermal printer label format
+- [x] Implement deep link handler for ticket opening
+- [x] Configure fallback to Telegram when app not installed
+- [ ] Test QR code scanning on iOS and Android (pending user testing)
+
+## Implementation Details:
+- QR code format: manusapp://ticket/TICKET_ID
+- Deep link opens ticket detail screen directly in app
+- Fallback: If app not installed, opens Telegram search for ticket ID
+- QR code printed on 62mm x 50mm label with ticket info
+- Telegram link included as text fallback on label
