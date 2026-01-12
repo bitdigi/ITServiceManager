@@ -21,7 +21,7 @@ import { useThemeColor } from '@/hooks/use-theme-color';
 import { useTickets } from '@/hooks/use-tickets';
 import { ServiceTicket, TicketStatus, ProductType } from '@/types/ticket';
 import { sendTicketToTelegram, deleteMessageFromTelegram } from '@/lib/telegram';
-import { printLabel } from '@/lib/thermal-printer';
+import { printLabel } from '@/lib/sunmi-printer';
 
 const PRODUCT_NAMES: Record<ProductType, string> = {
   laptop: 'Laptop',
@@ -198,12 +198,12 @@ export default function TicketDetailScreen() {
       const result = await printLabel(ticket);
 
       if (result.success) {
-        Alert.alert('Succes', TRANSLATIONS.printSuccess);
+        Alert.alert('Succes', 'Etichetă tipărită pe Sunmi T2S');
       } else {
-        Alert.alert('Eroare', result.error || TRANSLATIONS.printError);
+        Alert.alert('Eroare la imprimare', result.error || 'Verificați dacă imprimanta Sunmi T2S este disponibilă');
       }
     } catch (error) {
-      Alert.alert('Eroare', error instanceof Error ? error.message : TRANSLATIONS.printError);
+      Alert.alert('Eroare', error instanceof Error ? error.message : 'Eroare necunoscută');
     } finally {
       setPrinting(false);
     }

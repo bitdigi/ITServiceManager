@@ -146,3 +146,19 @@
 - Fallback: If app not installed, opens Telegram search for ticket ID
 - QR code printed on 62mm x 50mm label with ticket info
 - Telegram link included as text fallback on label
+
+
+## Phase 14: Fix Sunmi T2S Native Printer Integration
+- [x] Rewrite thermal printer service for Sunmi native API
+- [x] Remove Bluetooth dependency
+- [x] Use Sunmi PrinterService API directly
+- [ ] Test printing on Sunmi T2S AIO device (pending user testing)
+- [ ] Verify QR code printing works correctly (pending user testing)
+
+## Sunmi Printer Implementation:
+- Created sunmi-printer.ts with native API support
+- Uses NativeModules.SunmiPrinter for direct access
+- No Bluetooth required - works with integrated printer
+- Supports: printLabel, printTestLabel, printMultipleLabels, getPrinterStatus
+- Updated ticket-detail screen to use Sunmi printer
+- QR code included on all printed labels
