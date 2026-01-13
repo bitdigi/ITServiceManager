@@ -180,3 +180,19 @@
 - QR code: Centered with fallback Telegram link
 - Clean spacing and alignment for professional look
 - ESC/POS commands for proper formatting on thermal printer
+
+
+## Phase 16: Product Labels Generator
+- [x] Create new tab "Etichete" in tab bar
+- [x] Add icon mapping for labels tab (tag.fill -> label)
+- [x] Create product label form screen
+- [x] Implement product label data model
+- [x] Create print service for 62mm x 30mm labels
+- [x] Add preview before printing
+- [ ] Test printing on Sunmi T2S (pending user testing)
+
+## Product Label Requirements:
+- Label size: 62mm width x 30mm height
+- Content: Product name, price, specifications
+- Format: Optimized for thermal printer
+- Similar to example: "Incarcator Lenovo ThinkPad / 3.25A/20V 65W Usb-C / PRET 140 RON"

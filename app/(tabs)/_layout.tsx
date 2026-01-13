@@ -32,6 +32,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="labels"
+        options={{
+          title: "Etichete",
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="tag.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="reports"
         options={{
           title: "Rapoarte",

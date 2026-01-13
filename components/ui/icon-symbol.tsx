@@ -25,6 +25,7 @@ const MAPPING = {
   "pencil": "edit",
   "checkmark.circle.fill": "check-circle",
   "xmark.circle.fill": "cancel",
+  "tag.fill": "label",
 } as IconMapping;
 
 /**
