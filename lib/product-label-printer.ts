@@ -1,13 +1,10 @@
 /**
  * Product Label Printer Service
- * For Sunmi T2S AIO with integrated printer
+ * Uses Android Print Service (expo-print) instead of proprietary Sunmi API
  * Label format: 62mm width x 30mm height
  */
 
-import { NativeModules } from 'react-native';
-
-// Access Sunmi PrinterService through NativeModules
-const SunmiPrinter = NativeModules.SunmiPrinter || NativeModules.SunmiPrinterModule;
+import * as Print from 'expo-print';
 
 export interface ProductLabel {
   productName: string;
@@ -16,104 +13,84 @@ export interface ProductLabel {
 }
 
 /**
- * Generate product label text for Sunmi printer (ESC/POS format)
- * Format optimized for 62mm x 30mm label
- * 
- * Label Layout (similar to example):
- * ┌──────────────────────────┐
- * │ Incarcator Lenovo Think  │
- * │ 3.25A/20V 65W Usb-C      │
- * │ PRET 140 RON             │
- * └──────────────────────────┘
+ * Generate HTML for product label (62mm x 30mm)
+ * Optimized for thermal printer
  */
-function generateProductLabelText(label: ProductLabel): string {
+function generateProductLabelHTML(label: ProductLabel): string {
   const { productName, specifications, price } = label;
 
-  // ESC/POS commands for thermal printer
-  const ESC = '\x1B';
-  const GS = '\x1D';
-  
-  // Alignment
-  const ALIGN_CENTER = ESC + 'a' + '\x01';
-  const ALIGN_LEFT = ESC + 'a' + '\x00';
-  
-  // Text formatting
-  const BOLD_ON = ESC + 'E' + '\x01';
-  const BOLD_OFF = ESC + 'E' + '\x00';
-  const NORMAL_SIZE = GS + '!' + '\x00';
-  const DOUBLE_HEIGHT = GS + '!' + '\x01';
-  
-  const FEED_LINE = '\n';
-
-  // Build label with optimized layout for 30mm height
-  let labelText = '';
-  
-  // Center align all content
-  labelText += ALIGN_CENTER;
-  labelText += NORMAL_SIZE;
-  labelText += FEED_LINE;
-  
-  // Product name - normal size
-  labelText += productName;
-  labelText += FEED_LINE;
-  
-  // Specifications - if provided
-  if (specifications && specifications.trim()) {
-    labelText += specifications;
-    labelText += FEED_LINE;
-  }
-  
-  // Price - bold, slightly larger
-  labelText += BOLD_ON;
-  labelText += `PRET ${price.toFixed(0)} RON`;
-  labelText += BOLD_OFF;
-  labelText += FEED_LINE;
-  labelText += FEED_LINE;
-
-  return labelText;
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    @page {
+      size: 62mm 30mm;
+      margin: 0;
+    }
+    
+    body {
+      margin: 0;
+      padding: 2mm;
+      font-family: 'Courier New', monospace;
+      font-size: 10pt;
+      line-height: 1.2;
+      width: 62mm;
+      height: 30mm;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    
+    .product-name {
+      font-size: 11pt;
+      margin-bottom: 1mm;
+      font-weight: normal;
+    }
+    
+    .specifications {
+      font-size: 9pt;
+      margin-bottom: 1mm;
+    }
+    
+    .price {
+      font-size: 13pt;
+      font-weight: bold;
+      margin-top: 1mm;
+    }
+  </style>
+</head>
+<body>
+  <div class="product-name">${productName}</div>
+  ${specifications ? `<div class="specifications">${specifications}</div>` : ''}
+  <div class="price">PRET ${price.toFixed(0)} RON</div>
+</body>
+</html>
+  `;
 }
 
 /**
- * Print product label on Sunmi T2S integrated printer
+ * Print product label using Android Print Service
  */
 export async function printProductLabel(label: ProductLabel): Promise<{
   success: boolean;
   error?: string;
 }> {
   try {
-    if (!SunmiPrinter) {
-      return {
-        success: false,
-        error: 'Sunmi PrinterService nu este disponibil pe acest dispozitiv',
-      };
-    }
+    const html = generateProductLabelHTML(label);
+    
+    await Print.printAsync({
+      html,
+      width: 62 * 3.78, // 62mm to pixels (1mm ≈ 3.78px at 96 DPI)
+      height: 30 * 3.78, // 30mm to pixels
+    });
 
-    // Generate label text
-    const labelText = generateProductLabelText(label);
-
-    // Initialize printer
-    if (SunmiPrinter.initPrinter) {
-      await SunmiPrinter.initPrinter();
-    }
-
-    // Print text
-    if (SunmiPrinter.printText) {
-      await SunmiPrinter.printText(labelText);
-    } else if (SunmiPrinter.print) {
-      // Alternative method name
-      await SunmiPrinter.print(labelText);
-    }
-
-    // Feed paper
-    if (SunmiPrinter.feedPaper) {
-      await SunmiPrinter.feedPaper();
-    } else if (SunmiPrinter.lineWrap) {
-      await SunmiPrinter.lineWrap(2);
-    }
-
-    return {
-      success: true,
-    };
+    return { success: true };
   } catch (error) {
     console.error('Error printing product label:', error);
     return {
@@ -132,41 +109,17 @@ export async function printMultipleProductLabels(labels: ProductLabel[]): Promis
   error?: string;
 }> {
   try {
-    if (!SunmiPrinter) {
-      return {
-        success: false,
-        printed: 0,
-        error: 'Sunmi PrinterService nu este disponibil',
-      };
-    }
-
-    // Initialize printer
-    if (SunmiPrinter.initPrinter) {
-      await SunmiPrinter.initPrinter();
-    }
-
     let printedCount = 0;
 
     for (const label of labels) {
       try {
-        const labelText = generateProductLabelText(label);
-
-        // Print text
-        if (SunmiPrinter.printText) {
-          await SunmiPrinter.printText(labelText);
-        } else if (SunmiPrinter.print) {
-          await SunmiPrinter.print(labelText);
+        const result = await printProductLabel(label);
+        if (result.success) {
+          printedCount++;
         }
-
-        printedCount++;
       } catch (e) {
         console.error('Error printing label:', e);
       }
-    }
-
-    // Feed paper after all prints
-    if (SunmiPrinter.feedPaper) {
-      await SunmiPrinter.feedPaper();
     }
 
     return {

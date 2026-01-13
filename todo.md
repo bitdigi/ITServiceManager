@@ -196,3 +196,16 @@
 - Content: Product name, price, specifications
 - Format: Optimized for thermal printer
 - Similar to example: "Incarcator Lenovo ThinkPad / 3.25A/20V 65W Usb-C / PRET 140 RON"
+
+
+## Phase 17: Fix Printing with Android Print Service
+- [x] Rewrite thermal printer service for Android Print Framework
+- [x] Rewrite product label printer for Android Print Framework
+- [x] Use expo-print for HTML to PDF conversion
+- [ ] Test printing on Sunmi T2S with Default Print Service (pending user testing)
+- [ ] Verify both ticket labels and product labels print correctly (pending user testing)
+
+## Issue:
+- Sunmi T2S uses Android Print Service (Default Print Service), not Sunmi proprietary API
+- Need to use standard Android Print Framework instead of NativeModules.SunmiPrinter
+- expo-print library provides cross-platform printing support

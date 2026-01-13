@@ -1,239 +1,155 @@
 /**
- * Sunmi Native Printer Service
- * For Sunmi T2S AIO with integrated printer
- * Uses Sunmi PrinterService API directly (no Bluetooth required)
- * Optimized label design for 62mm x 50mm thermal labels
+ * Thermal Printer Service for Sunmi T2S
+ * Uses Android Print Service (expo-print) instead of proprietary Sunmi API
+ * Label format: 62mm width x 50mm height
  */
 
-import { NativeModules, Alert } from 'react-native';
-import { ServiceTicket } from '@/types/ticket';
-import { generateQRCodeForPrinter } from './qr-code';
-
-// Access Sunmi PrinterService through NativeModules
-const SunmiPrinter = NativeModules.SunmiPrinter || NativeModules.SunmiPrinterModule;
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import type { ServiceTicket } from '@/types/ticket';
 
 /**
- * Format product type for display
+ * Generate HTML for ticket label (62mm x 50mm)
+ * Optimized for thermal printer
  */
-function formatProductType(type: string): string {
-  const productNames: Record<string, string> = {
-    laptop: 'Laptop',
-    pc: 'PC',
-    phone: 'Telefon',
-    printer: 'Imprimantă',
-    gps: 'GPS',
-    tv: 'TV',
-    box: 'Box',
-    tablet: 'Tabletă',
-  };
-  return productNames[type] || type;
-}
-
-/**
- * Format date to DD.MM.YYYY
- */
-function formatDate(dateString: string): string {
-  try {
-    const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}.${month}.${year}`;
-  } catch {
-    return dateString;
-  }
-}
-
-/**
- * Generate optimized label text for Sunmi printer (ESC/POS format)
- * Format optimized for 62mm x 50mm label with clear visual hierarchy
- * 
- * Label Layout:
- * ┌──────────────────────────┐
- * │   FIȘĂ SERVICE           │
- * │ ════════════════════════ │
- * │ ID: ABC123               │
- * │ TEL: 0712345678          │
- * │ DATA: 12.01.2025         │
- * │ ──────────────────────── │
- * │ DEFECT:                  │
- * │ Nu pornește...           │
- * │ ──────────────────────── │
- * │     [QR CODE]            │
- * │ t.me/search?q=ABC123     │
- * └──────────────────────────┘
- */
-function generateLabelText(ticket: ServiceTicket): string {
-  const ticketId = ticket.id.substring(0, 8).toUpperCase();
-  const clientPhone = ticket.clientPhone;
-  const receivedDate = formatDate(ticket.dateReceived);
-  const problem = ticket.problemDescription.length > 40 
-    ? ticket.problemDescription.substring(0, 37) + '...' 
+function generateTicketLabelHTML(ticket: ServiceTicket, qrCodeDataUrl?: string): string {
+  const formattedDate = new Date(ticket.dateReceived).toLocaleDateString('ro-RO');
+  
+  // Truncate problem description to fit on label
+  const problemText = ticket.problemDescription.length > 40
+    ? ticket.problemDescription.substring(0, 37) + '...'
     : ticket.problemDescription;
 
-  // ESC/POS commands for thermal printer
-  const ESC = '\x1B';
-  const GS = '\x1D';
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    @page {
+      size: 62mm 50mm;
+      margin: 0;
+    }
+    
+    body {
+      margin: 0;
+      padding: 4mm;
+      font-family: 'Courier New', monospace;
+      font-size: 10pt;
+      line-height: 1.3;
+      width: 62mm;
+      height: 50mm;
+      box-sizing: border-box;
+    }
+    
+    .header {
+      text-align: center;
+      font-weight: bold;
+      font-size: 14pt;
+      margin-bottom: 2mm;
+      border-bottom: 2px solid #000;
+      padding-bottom: 1mm;
+    }
+    
+    .info-row {
+      margin: 1mm 0;
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    .label {
+      font-weight: bold;
+    }
+    
+    .separator {
+      border-top: 1px solid #000;
+      margin: 2mm 0;
+    }
+    
+    .defect-section {
+      margin-top: 2mm;
+    }
+    
+    .defect-label {
+      font-weight: bold;
+      margin-bottom: 1mm;
+    }
+    
+    .defect-text {
+      font-size: 9pt;
+    }
+    
+    .qr-section {
+      text-align: center;
+      margin-top: 2mm;
+    }
+    
+    .qr-code {
+      width: 20mm;
+      height: 20mm;
+      margin: 0 auto;
+    }
+    
+    .telegram-link {
+      font-size: 7pt;
+      margin-top: 1mm;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">FIȘĂ SERVICE</div>
   
-  // Alignment
-  const ALIGN_CENTER = ESC + 'a' + '\x01';
-  const ALIGN_LEFT = ESC + 'a' + '\x00';
+  <div class="info-row">
+    <span><span class="label">ID:</span> ${ticket.id}</span>
+  </div>
   
-  // Text formatting
-  const BOLD_ON = ESC + 'E' + '\x01';
-  const BOLD_OFF = ESC + 'E' + '\x00';
-  const DOUBLE_HEIGHT = GS + '!' + '\x01'; // Double height
-  const NORMAL_SIZE = GS + '!' + '\x00';   // Normal size
+  <div class="info-row">
+    <span><span class="label">TEL:</span> ${ticket.clientPhone}</span>
+  </div>
   
-  // Separators
-  const FEED_LINE = '\n';
-  const THICK_SEP = '════════════════════════\n';
-  const THIN_SEP = '────────────────────────\n';
-
-  // Build label with optimized layout
-  let label = '';
+  <div class="info-row">
+    <span><span class="label">DATA:</span> ${formattedDate}</span>
+  </div>
   
-  // Header - centered, bold, double height
-  label += ALIGN_CENTER;
-  label += BOLD_ON;
-  label += DOUBLE_HEIGHT;
-  label += 'FIȘĂ SERVICE';
-  label += NORMAL_SIZE;
-  label += BOLD_OFF;
-  label += FEED_LINE;
+  <div class="separator"></div>
   
-  // Thick separator
-  label += THICK_SEP;
-  label += FEED_LINE;
+  <div class="defect-section">
+    <div class="defect-label">DEFECT:</div>
+    <div class="defect-text">${problemText}</div>
+  </div>
   
-  // Ticket info - left aligned, normal size
-  label += ALIGN_LEFT;
-  label += BOLD_ON;
-  label += 'ID: ';
-  label += BOLD_OFF;
-  label += ticketId;
-  label += FEED_LINE;
-  label += FEED_LINE;
-  
-  label += BOLD_ON;
-  label += 'TEL: ';
-  label += BOLD_OFF;
-  label += clientPhone;
-  label += FEED_LINE;
-  label += FEED_LINE;
-  
-  label += BOLD_ON;
-  label += 'DATA: ';
-  label += BOLD_OFF;
-  label += receivedDate;
-  label += FEED_LINE;
-  label += FEED_LINE;
-  
-  // Thin separator
-  label += THIN_SEP;
-  label += FEED_LINE;
-  
-  // Defect description
-  label += BOLD_ON;
-  label += 'DEFECT:';
-  label += BOLD_OFF;
-  label += FEED_LINE;
-  label += problem;
-  label += FEED_LINE;
-  label += FEED_LINE;
-  
-  // Thin separator
-  label += THIN_SEP;
-  label += FEED_LINE;
-  
-  // QR code reference - centered
-  label += ALIGN_CENTER;
-  const qrData = generateQRCodeForPrinter(ticket);
-  label += '[QR CODE]';
-  label += FEED_LINE;
-  label += FEED_LINE;
-  
-  // Telegram fallback link - small text, centered
-  if (qrData.fallbackUrl) {
-    // Extract just the search part for cleaner display
-    const shortLink = qrData.fallbackUrl.replace('https://', '');
-    label += shortLink;
-    label += FEED_LINE;
-  }
-  
-  // Final spacing
-  label += FEED_LINE;
-  label += FEED_LINE;
-
-  return label;
+  ${qrCodeDataUrl ? `
+  <div class="separator"></div>
+  <div class="qr-section">
+    <img src="${qrCodeDataUrl}" class="qr-code" alt="QR Code" />
+    <div class="telegram-link">Scanează pentru detalii</div>
+  </div>
+  ` : ''}
+</body>
+</html>
+  `;
 }
 
 /**
- * Check if Sunmi printer is available
+ * Print ticket label using Android Print Service
  */
-export async function isSunmiPrinterAvailable(): Promise<boolean> {
-  try {
-    if (!SunmiPrinter) {
-      console.warn('SunmiPrinter module not available');
-      return false;
-    }
-
-    // Try to call a simple method to check if printer is available
-    if (SunmiPrinter.getPrinterStatus) {
-      const status = await SunmiPrinter.getPrinterStatus();
-      return status === 0; // 0 = normal
-    }
-
-    return true; // Assume available if module exists
-  } catch (error) {
-    console.error('Error checking Sunmi printer:', error);
-    return false;
-  }
-}
-
-/**
- * Print label on Sunmi T2S integrated printer
- */
-export async function printLabel(ticket: ServiceTicket): Promise<{
+export async function printLabel(ticket: ServiceTicket, qrCodeDataUrl?: string): Promise<{
   success: boolean;
   error?: string;
 }> {
   try {
-    if (!SunmiPrinter) {
-      return {
-        success: false,
-        error: 'Sunmi PrinterService nu este disponibil pe acest dispozitiv',
-      };
-    }
+    const html = generateTicketLabelHTML(ticket, qrCodeDataUrl);
+    
+    await Print.printAsync({
+      html,
+      width: 62 * 3.78, // 62mm to pixels (1mm ≈ 3.78px at 96 DPI)
+      height: 50 * 3.78, // 50mm to pixels
+    });
 
-    // Generate label text
-    const labelText = generateLabelText(ticket);
-
-    // Initialize printer
-    if (SunmiPrinter.initPrinter) {
-      await SunmiPrinter.initPrinter();
-    }
-
-    // Print text
-    if (SunmiPrinter.printText) {
-      await SunmiPrinter.printText(labelText);
-    } else if (SunmiPrinter.print) {
-      // Alternative method name
-      await SunmiPrinter.print(labelText);
-    }
-
-    // Feed paper
-    if (SunmiPrinter.feedPaper) {
-      await SunmiPrinter.feedPaper();
-    } else if (SunmiPrinter.lineWrap) {
-      await SunmiPrinter.lineWrap(3);
-    }
-
-    return {
-      success: true,
-    };
+    return { success: true };
   } catch (error) {
-    console.error('Error printing label:', error);
+    console.error('Error printing ticket label:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Eroare la imprimare',
@@ -249,63 +165,29 @@ export async function printTestLabel(): Promise<{
   error?: string;
 }> {
   try {
-    if (!SunmiPrinter) {
-      return {
-        success: false,
-        error: 'Sunmi PrinterService nu este disponibil',
-      };
-    }
-
-    // Initialize printer
-    if (SunmiPrinter.initPrinter) {
-      await SunmiPrinter.initPrinter();
-    }
-
-    const ESC = '\x1B';
-    const GS = '\x1D';
-    const ALIGN_CENTER = ESC + 'a' + '\x01';
-    const BOLD_ON = ESC + 'E' + '\x01';
-    const BOLD_OFF = ESC + 'E' + '\x00';
-    const DOUBLE_HEIGHT = GS + '!' + '\x01';
-    const NORMAL_SIZE = GS + '!' + '\x00';
-    const FEED_LINE = '\n';
-    const SEPARATOR = '════════════════════════\n';
-
-    let testLabel = ALIGN_CENTER;
-    testLabel += BOLD_ON;
-    testLabel += DOUBLE_HEIGHT;
-    testLabel += 'TEST IMPRIMARE';
-    testLabel += NORMAL_SIZE;
-    testLabel += BOLD_OFF;
-    testLabel += FEED_LINE;
-    testLabel += SEPARATOR;
-    testLabel += FEED_LINE;
-    testLabel += 'Sunmi T2S';
-    testLabel += FEED_LINE;
-    testLabel += 'Imprimantă Integrată';
-    testLabel += FEED_LINE;
-    testLabel += 'Etichetă 62mm x 50mm';
-    testLabel += FEED_LINE;
-    testLabel += FEED_LINE;
-    testLabel += SEPARATOR;
-    testLabel += FEED_LINE;
-    testLabel += FEED_LINE;
-
-    // Print test label
-    if (SunmiPrinter.printText) {
-      await SunmiPrinter.printText(testLabel);
-    } else if (SunmiPrinter.print) {
-      await SunmiPrinter.print(testLabel);
-    }
-
-    // Feed paper
-    if (SunmiPrinter.feedPaper) {
-      await SunmiPrinter.feedPaper();
-    }
-
-    return {
-      success: true,
+    const testTicket: ServiceTicket = {
+      id: 'TEST123',
+      clientName: 'Test Client',
+      clientPhone: '0712345678',
+      clientEmail: 'test@example.com',
+      productType: 'laptop',
+      productModel: 'Test Model',
+      productSerialNumber: 'SN123456',
+      problemDescription: 'Test problem description',
+      diagnostic: '',
+      solutionApplied: '',
+      cost: 100,
+      status: 'pending',
+      technicianName: 'Test Technician',
+      dateReceived: new Date().toISOString(),
+      dateDelivered: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      telegramSent: false,
+      telegramMessageId: null,
     };
+
+    return await printLabel(testTicket);
   } catch (error) {
     console.error('Error printing test label:', error);
     return {
@@ -318,47 +200,29 @@ export async function printTestLabel(): Promise<{
 /**
  * Print multiple labels
  */
-export async function printMultipleLabels(tickets: ServiceTicket[]): Promise<{
+export async function printMultipleLabels(
+  tickets: ServiceTicket[],
+  qrCodeDataUrls?: string[]
+): Promise<{
   success: boolean;
   printed: number;
   error?: string;
 }> {
   try {
-    if (!SunmiPrinter) {
-      return {
-        success: false,
-        printed: 0,
-        error: 'Sunmi PrinterService nu este disponibil',
-      };
-    }
-
-    // Initialize printer
-    if (SunmiPrinter.initPrinter) {
-      await SunmiPrinter.initPrinter();
-    }
-
     let printedCount = 0;
 
-    for (const ticket of tickets) {
+    for (let i = 0; i < tickets.length; i++) {
+      const ticket = tickets[i];
+      const qrCode = qrCodeDataUrls?.[i];
+
       try {
-        const labelText = generateLabelText(ticket);
-
-        // Print text
-        if (SunmiPrinter.printText) {
-          await SunmiPrinter.printText(labelText);
-        } else if (SunmiPrinter.print) {
-          await SunmiPrinter.print(labelText);
+        const result = await printLabel(ticket, qrCode);
+        if (result.success) {
+          printedCount++;
         }
-
-        printedCount++;
       } catch (e) {
-        console.error('Error printing ticket:', e);
+        console.error('Error printing label:', e);
       }
-    }
-
-    // Feed paper after all prints
-    if (SunmiPrinter.feedPaper) {
-      await SunmiPrinter.feedPaper();
     }
 
     return {
@@ -377,42 +241,25 @@ export async function printMultipleLabels(tickets: ServiceTicket[]): Promise<{
 }
 
 /**
- * Get printer status
+ * Get printer status (not available with expo-print)
  */
 export async function getPrinterStatus(): Promise<{
-  status: string;
-  error?: string;
+  available: boolean;
+  message: string;
 }> {
   try {
-    if (!SunmiPrinter) {
-      return {
-        status: 'unavailable',
-        error: 'Sunmi PrinterService nu este disponibil',
-      };
-    }
-
-    if (SunmiPrinter.getPrinterStatus) {
-      const statusCode = await SunmiPrinter.getPrinterStatus();
-      const statusMap: Record<number, string> = {
-        0: 'normal',
-        1: 'offline',
-        2: 'error',
-        3: 'paper_low',
-        4: 'paper_out',
-      };
-      return {
-        status: statusMap[statusCode] || 'unknown',
-      };
-    }
-
+    // expo-print doesn't have isAvailableAsync, assume available
+    const isAvailable = true;
     return {
-      status: 'available',
+      available: isAvailable,
+      message: isAvailable
+        ? 'Serviciu de imprimare disponibil'
+        : 'Serviciu de imprimare indisponibil',
     };
   } catch (error) {
-    console.error('Error getting printer status:', error);
     return {
-      status: 'error',
-      error: error instanceof Error ? error.message : 'Eroare la verificare status',
+      available: false,
+      message: 'Eroare la verificare status imprimantă',
     };
   }
 }
