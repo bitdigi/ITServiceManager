@@ -1,10 +1,10 @@
 /**
  * Product Label Printer Service
- * Uses Android Print Service (expo-print) instead of proprietary Sunmi API
+ * Uses react-native-sunmi-inner-printer for SunmiPrinterService
  * Label format: 62mm width x 30mm height
  */
 
-import * as Print from 'expo-print';
+import SunmiInnerPrinter from 'react-native-sunmi-inner-printer';
 
 export interface ProductLabel {
   productName: string;
@@ -13,82 +13,53 @@ export interface ProductLabel {
 }
 
 /**
- * Generate HTML for product label (62mm x 30mm)
- * Optimized for thermal printer
+ * Initialize Sunmi printer
  */
-function generateProductLabelHTML(label: ProductLabel): string {
-  const { productName, specifications, price } = label;
-
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    @page {
-      size: 62mm 30mm;
-      margin: 0;
-    }
-    
-    body {
-      margin: 0;
-      padding: 2mm;
-      font-family: 'Courier New', monospace;
-      font-size: 10pt;
-      line-height: 1.2;
-      width: 62mm;
-      height: 30mm;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-    }
-    
-    .product-name {
-      font-size: 11pt;
-      margin-bottom: 1mm;
-      font-weight: normal;
-    }
-    
-    .specifications {
-      font-size: 9pt;
-      margin-bottom: 1mm;
-    }
-    
-    .price {
-      font-size: 13pt;
-      font-weight: bold;
-      margin-top: 1mm;
-    }
-  </style>
-</head>
-<body>
-  <div class="product-name">${productName}</div>
-  ${specifications ? `<div class="specifications">${specifications}</div>` : ''}
-  <div class="price">PRET ${price.toFixed(0)} RON</div>
-</body>
-</html>
-  `;
+async function initPrinter(): Promise<void> {
+  try {
+    await SunmiInnerPrinter.printerInit();
+  } catch (error) {
+    console.error('Error initializing printer:', error);
+    throw error;
+  }
 }
 
 /**
- * Print product label using Android Print Service
+ * Print product label using Sunmi printer
  */
 export async function printProductLabel(label: ProductLabel): Promise<{
   success: boolean;
   error?: string;
 }> {
   try {
-    const html = generateProductLabelHTML(label);
-    
-    await Print.printAsync({
-      html,
-      width: 62 * 3.78, // 62mm to pixels (1mm ≈ 3.78px at 96 DPI)
-      height: 30 * 3.78, // 30mm to pixels
-    });
+    const { productName, specifications, price } = label;
+
+    // Initialize printer
+    await initPrinter();
+
+    // Set alignment to center
+    await SunmiInnerPrinter.setAlignment(1); // 0=left, 1=center, 2=right
+
+    // Set normal font size
+    await SunmiInnerPrinter.setFontSize(24);
+
+    // Print product name
+    await SunmiInnerPrinter.printText('\n');
+    await SunmiInnerPrinter.printText(`${productName}\n`);
+
+    // Print specifications if provided
+    if (specifications && specifications.trim()) {
+      await SunmiInnerPrinter.setFontSize(20);
+      await SunmiInnerPrinter.printText(`${specifications}\n`);
+    }
+
+    // Print price - bold and larger
+    await SunmiInnerPrinter.setFontSize(28);
+    await SunmiInnerPrinter.printText(`PRET ${price.toFixed(0)} RON\n`);
+
+    // Feed paper
+    await SunmiInnerPrinter.printText('\n');
+    await SunmiInnerPrinter.lineWrap(2);
 
     return { success: true };
   } catch (error) {

@@ -1,18 +1,29 @@
 /**
  * Thermal Printer Service for Sunmi T2S
- * Uses Android Print Service (expo-print) instead of proprietary Sunmi API
+ * Uses react-native-sunmi-inner-printer for SunmiPrinterService
  * Label format: 62mm width x 50mm height
  */
 
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
+import SunmiInnerPrinter from 'react-native-sunmi-inner-printer';
 import type { ServiceTicket } from '@/types/ticket';
 
 /**
- * Generate HTML for ticket label (62mm x 50mm)
- * Optimized for thermal printer
+ * Initialize Sunmi printer
  */
-function generateTicketLabelHTML(ticket: ServiceTicket, qrCodeDataUrl?: string): string {
+async function initPrinter(): Promise<void> {
+  try {
+    await SunmiInnerPrinter.printerInit();
+  } catch (error) {
+    console.error('Error initializing printer:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generate ticket label text for Sunmi printer
+ * Format optimized for 62mm x 50mm label
+ */
+function generateTicketLabelText(ticket: ServiceTicket): string {
   const formattedDate = new Date(ticket.dateReceived).toLocaleDateString('ro-RO');
   
   // Truncate problem description to fit on label
@@ -20,132 +31,88 @@ function generateTicketLabelHTML(ticket: ServiceTicket, qrCodeDataUrl?: string):
     ? ticket.problemDescription.substring(0, 37) + '...'
     : ticket.problemDescription;
 
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    @page {
-      size: 62mm 50mm;
-      margin: 0;
-    }
-    
-    body {
-      margin: 0;
-      padding: 4mm;
-      font-family: 'Courier New', monospace;
-      font-size: 10pt;
-      line-height: 1.3;
-      width: 62mm;
-      height: 50mm;
-      box-sizing: border-box;
-    }
-    
-    .header {
-      text-align: center;
-      font-weight: bold;
-      font-size: 14pt;
-      margin-bottom: 2mm;
-      border-bottom: 2px solid #000;
-      padding-bottom: 1mm;
-    }
-    
-    .info-row {
-      margin: 1mm 0;
-      display: flex;
-      justify-content: space-between;
-    }
-    
-    .label {
-      font-weight: bold;
-    }
-    
-    .separator {
-      border-top: 1px solid #000;
-      margin: 2mm 0;
-    }
-    
-    .defect-section {
-      margin-top: 2mm;
-    }
-    
-    .defect-label {
-      font-weight: bold;
-      margin-bottom: 1mm;
-    }
-    
-    .defect-text {
-      font-size: 9pt;
-    }
-    
-    .qr-section {
-      text-align: center;
-      margin-top: 2mm;
-    }
-    
-    .qr-code {
-      width: 20mm;
-      height: 20mm;
-      margin: 0 auto;
-    }
-    
-    .telegram-link {
-      font-size: 7pt;
-      margin-top: 1mm;
-    }
-  </style>
-</head>
-<body>
-  <div class="header">FIȘĂ SERVICE</div>
+  let labelText = '';
   
-  <div class="info-row">
-    <span><span class="label">ID:</span> ${ticket.id}</span>
-  </div>
+  // Header - centered, bold, double height
+  labelText += '\n';
+  labelText += '     FIȘĂ SERVICE\n';
+  labelText += '═══════════════════════════\n';
+  labelText += '\n';
   
-  <div class="info-row">
-    <span><span class="label">TEL:</span> ${ticket.clientPhone}</span>
-  </div>
+  // Info section
+  labelText += `ID: ${ticket.id}\n`;
+  labelText += `TEL: ${ticket.clientPhone}\n`;
+  labelText += `DATA: ${formattedDate}\n`;
+  labelText += '───────────────────────────\n';
   
-  <div class="info-row">
-    <span><span class="label">DATA:</span> ${formattedDate}</span>
-  </div>
+  // Defect section
+  labelText += 'DEFECT:\n';
+  labelText += `${problemText}\n`;
+  labelText += '───────────────────────────\n';
   
-  <div class="separator"></div>
-  
-  <div class="defect-section">
-    <div class="defect-label">DEFECT:</div>
-    <div class="defect-text">${problemText}</div>
-  </div>
-  
-  ${qrCodeDataUrl ? `
-  <div class="separator"></div>
-  <div class="qr-section">
-    <img src="${qrCodeDataUrl}" class="qr-code" alt="QR Code" />
-    <div class="telegram-link">Scanează pentru detalii</div>
-  </div>
-  ` : ''}
-</body>
-</html>
-  `;
+  // Footer
+  labelText += '\n';
+  labelText += 'Scanează QR pentru detalii\n';
+  labelText += '\n';
+
+  return labelText;
 }
 
 /**
- * Print ticket label using Android Print Service
+ * Print ticket label using Sunmi printer
  */
 export async function printLabel(ticket: ServiceTicket, qrCodeDataUrl?: string): Promise<{
   success: boolean;
   error?: string;
 }> {
   try {
-    const html = generateTicketLabelHTML(ticket, qrCodeDataUrl);
+    // Initialize printer
+    await initPrinter();
+
+    // Set alignment to center
+    await SunmiInnerPrinter.setAlignment(1); // 0=left, 1=center, 2=right
+
+    // Print header with larger font
+    await SunmiInnerPrinter.setFontSize(28);
+    await SunmiInnerPrinter.printText('FIȘĂ SERVICE\n');
+    await SunmiInnerPrinter.printText('═══════════════════════════\n');
+
+    // Reset to normal font
+    await SunmiInnerPrinter.setFontSize(24);
+    await SunmiInnerPrinter.printText('\n');
+
+    // Set alignment to left for info
+    await SunmiInnerPrinter.setAlignment(0);
+
+    // Print ticket info
+    const formattedDate = new Date(ticket.dateReceived).toLocaleDateString('ro-RO');
+    await SunmiInnerPrinter.printText(`ID: ${ticket.id}\n`);
+    await SunmiInnerPrinter.printText(`TEL: ${ticket.clientPhone}\n`);
+    await SunmiInnerPrinter.printText(`DATA: ${formattedDate}\n`);
+    await SunmiInnerPrinter.printText('───────────────────────────\n');
+
+    // Print defect
+    const problemText = ticket.problemDescription.length > 40
+      ? ticket.problemDescription.substring(0, 37) + '...'
+      : ticket.problemDescription;
     
-    await Print.printAsync({
-      html,
-      width: 62 * 3.78, // 62mm to pixels (1mm ≈ 3.78px at 96 DPI)
-      height: 50 * 3.78, // 50mm to pixels
-    });
+    await SunmiInnerPrinter.printText('DEFECT:\n');
+    await SunmiInnerPrinter.printText(`${problemText}\n`);
+    await SunmiInnerPrinter.printText('───────────────────────────\n');
+
+    // Print QR code if provided
+    if (qrCodeDataUrl) {
+      await SunmiInnerPrinter.setAlignment(1); // Center
+      await SunmiInnerPrinter.printText('\n');
+      
+      // Print QR code (if we have the data URL, we need to convert it)
+      // For now, print text fallback
+      await SunmiInnerPrinter.printText('Scanează QR pentru detalii\n');
+    }
+
+    // Feed paper
+    await SunmiInnerPrinter.printText('\n\n');
+    await SunmiInnerPrinter.lineWrap(3);
 
     return { success: true };
   } catch (error) {
@@ -241,25 +208,22 @@ export async function printMultipleLabels(
 }
 
 /**
- * Get printer status (not available with expo-print)
+ * Get printer status
  */
 export async function getPrinterStatus(): Promise<{
   available: boolean;
   message: string;
 }> {
   try {
-    // expo-print doesn't have isAvailableAsync, assume available
-    const isAvailable = true;
+    await initPrinter();
     return {
-      available: isAvailable,
-      message: isAvailable
-        ? 'Serviciu de imprimare disponibil'
-        : 'Serviciu de imprimare indisponibil',
+      available: true,
+      message: 'Sunmi PrinterService disponibil',
     };
   } catch (error) {
     return {
       available: false,
-      message: 'Eroare la verificare status imprimantă',
+      message: 'Sunmi PrinterService indisponibil',
     };
   }
 }
