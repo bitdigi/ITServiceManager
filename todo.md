@@ -225,3 +225,19 @@
 - Provides native bindings to SunmiPrinterService
 - Supports ESC/POS commands natively
 - Better integration than generic Android Print Service
+
+
+## Phase 19: QR Code with Deep Link and Telegram Protection
+- [x] Update qr-code.ts to generate deep link with Telegram fallback
+- [x] Implement Telegram message ID storage when sending ticket
+- [x] Create private Telegram link (t.me/c/GROUP_ID/MESSAGE_ID)
+- [x] Integrate printQRCode() in sunmi-printer.ts
+- [ ] Test QR code scanning with app installed (pending user testing)
+- [ ] Test QR code scanning without app (Telegram fallback) (pending user testing)
+- [ ] Verify non-members cannot access Telegram message (pending user testing)
+
+## QR Code Flow:
+1. **App installed**: manusapp://ticket/TICKET_ID → Opens ticket in app
+2. **No app**: Fallback to https://t.me/c/GROUP_ID/MESSAGE_ID → Opens Telegram message
+3. **Non-member**: Telegram blocks access automatically (private group)
+4. **Security**: Only group members can view ticket details on Telegram

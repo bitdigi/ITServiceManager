@@ -6,6 +6,8 @@
 
 import SunmiInnerPrinter from 'react-native-sunmi-inner-printer';
 import type { ServiceTicket } from '@/types/ticket';
+import { generateTicketQRData, generateTelegramFallbackLink } from './qr-code';
+import { settingsStorage } from './storage';
 
 /**
  * Initialize Sunmi printer
@@ -100,14 +102,30 @@ export async function printLabel(ticket: ServiceTicket, qrCodeDataUrl?: string):
     await SunmiInnerPrinter.printText(`${problemText}\n`);
     await SunmiInnerPrinter.printText('───────────────────────────\n');
 
-    // Print QR code if provided
-    if (qrCodeDataUrl) {
-      await SunmiInnerPrinter.setAlignment(1); // Center
-      await SunmiInnerPrinter.printText('\n');
-      
-      // Print QR code (if we have the data URL, we need to convert it)
-      // For now, print text fallback
+    // Print QR code
+    await SunmiInnerPrinter.setAlignment(1); // Center
+    await SunmiInnerPrinter.printText('\n');
+    
+    // Generate QR code data (deep link with Telegram fallback)
+    const qrData = generateTicketQRData(ticket);
+    
+    try {
+      // Print QR code using Sunmi API
+      // Parameters: data, moduleSize (8), errorLevel (3 = high)
+      await SunmiInnerPrinter.printQRCode(qrData, 8, 3);
+    } catch (error) {
+      console.error('Error printing QR code:', error);
+      // Fallback to text if QR code fails
       await SunmiInnerPrinter.printText('Scanează QR pentru detalii\n');
+    }
+    
+    // Print Telegram fallback link
+    const settings = await settingsStorage.getSettings();
+    const telegramConfig = await settingsStorage.getTelegramConfig();
+    if (telegramConfig?.groupId && ticket.telegramMessageId) {
+      const telegramLink = generateTelegramFallbackLink(ticket, telegramConfig.groupId);
+      await SunmiInnerPrinter.setFontSize(18);
+      await SunmiInnerPrinter.printText(`${telegramLink}\n`);
     }
 
     // Feed paper
