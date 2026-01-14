@@ -7,20 +7,16 @@
 import * as Print from 'expo-print';
 import { shareAsync } from 'expo-sharing';
 import type { ServiceTicket } from '@/types/ticket';
-import { generateTicketQRData, generateTelegramFallbackLink } from './qr-code';
-import { settingsStorage } from './storage';
+import { generateTicketQRCode } from './qr-code-generator';
 
 /**
  * Generate HTML for ticket label (62mm x 50mm)
  */
-function generateTicketLabelHTML(ticket: ServiceTicket, telegramLink?: string): string {
-  const formattedDate = new Date(ticket.dateReceived).toLocaleDateString('ro-RO');
-  const problemText = ticket.problemDescription.length > 50
-    ? ticket.problemDescription.substring(0, 47) + '...'
-    : ticket.problemDescription;
-
-  // Generate QR code data
-  const qrData = generateTicketQRData(ticket);
+async function generateTicketLabelHTML(ticket: ServiceTicket, qrCodeImage: string): Promise<string> {
+  const formattedDate = new Date(ticket.createdAt).toLocaleDateString('ro-RO');
+  const problemText = ticket.defectDescription.length > 50
+    ? ticket.defectDescription.substring(0, 47) + '...'
+    : ticket.defectDescription;
 
   return `
     <!DOCTYPE html>
@@ -35,77 +31,97 @@ function generateTicketLabelHTML(ticket: ServiceTicket, telegramLink?: string): 
         }
         body {
           margin: 0;
-          padding: 4mm;
-          font-family: 'Courier New', monospace;
-          font-size: 10pt;
-          line-height: 1.2;
+          padding: 2mm;
+          font-family: -apple-system, system-ui, sans-serif;
+          font-size: 9pt;
           width: 62mm;
           height: 50mm;
-          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
         }
         .header {
           text-align: center;
           font-weight: bold;
-          font-size: 14pt;
-          margin-bottom: 2mm;
-          border-bottom: 2px solid #000;
-          padding-bottom: 1mm;
+          font-size: 11pt;
+          margin-bottom: 1mm;
+          border-bottom: 1px solid #000;
+          padding-bottom: 0.5mm;
         }
-        .info-row {
-          margin: 1mm 0;
-          font-size: 9pt;
+        .content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-around;
+          margin: 0.5mm 0;
+        }
+        .row {
+          display: flex;
+          justify-content: space-between;
+          margin: 0.3mm 0;
+          font-size: 8pt;
         }
         .label {
           font-weight: bold;
+          min-width: 12mm;
         }
-        .separator {
-          border-top: 1px dashed #000;
-          margin: 2mm 0;
+        .value {
+          flex: 1;
+          text-align: right;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          max-width: 28mm;
         }
-        .qr-container {
-          text-align: center;
-          margin-top: 2mm;
-        }
-        .qr-placeholder {
-          font-size: 8pt;
-          text-align: center;
-          margin-top: 2mm;
-        }
-        .telegram-link {
+        .defect {
+          margin-top: 0.5mm;
+          padding-top: 0.5mm;
+          border-top: 1px solid #000;
           font-size: 7pt;
-          text-align: center;
-          margin-top: 1mm;
-          word-break: break-all;
+          max-height: 5mm;
+          overflow: hidden;
+        }
+        .qr-section {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin-top: 0.5mm;
+          padding-top: 0.5mm;
+          border-top: 1px solid #000;
+        }
+        .qr-code {
+          width: 18mm;
+          height: 18mm;
         }
       </style>
     </head>
     <body>
       <div class="header">FIȘĂ SERVICE</div>
       
-      <div class="info-row">
-        <span class="label">ID:</span> ${ticket.id}
-      </div>
-      <div class="info-row">
-        <span class="label">TEL:</span> ${ticket.clientPhone}
-      </div>
-      <div class="info-row">
-        <span class="label">DATA:</span> ${formattedDate}
+      <div class="content">
+        <div class="row">
+          <span class="label">ID:</span>
+          <span class="value">${ticket.id.substring(0, 8)}</span>
+        </div>
+        
+        <div class="row">
+          <span class="label">TEL:</span>
+          <span class="value">${ticket.clientPhone}</span>
+        </div>
+        
+        <div class="row">
+          <span class="label">DATA:</span>
+          <span class="value">${formattedDate}</span>
+        </div>
+        
+        <div class="defect">
+          <strong>Defect:</strong> ${problemText}
+        </div>
       </div>
       
-      <div class="separator"></div>
-      
-      <div class="info-row">
-        <span class="label">DEFECT:</span><br>
-        ${problemText}
+      <div class="qr-section">
+        <img src="${qrCodeImage}" class="qr-code" alt="QR Code">
       </div>
-      
-      <div class="qr-placeholder">
-        Scanează QR pentru detalii
-      </div>
-      
-      ${telegramLink ? `
-        <div class="telegram-link">${telegramLink}</div>
-      ` : ''}
     </body>
     </html>
   `;
@@ -119,24 +135,25 @@ export async function printLabel(ticket: ServiceTicket): Promise<{
   error?: string;
 }> {
   try {
-    // Get Telegram link
-    const telegramConfig = await settingsStorage.getTelegramConfig();
-    const telegramLink = telegramConfig?.groupId && ticket.telegramMessageId
-      ? generateTelegramFallbackLink(ticket, telegramConfig.groupId)
-      : undefined;
+    // Generate QR code image
+    const qrCodeImage = await generateTicketQRCode(ticket.id, ticket.telegramGroupId, ticket.telegramMessageId);
     
     // Generate HTML
-    const html = generateTicketLabelHTML(ticket, telegramLink);
+    const html = await generateTicketLabelHTML(ticket, qrCodeImage);
     
     // Print to PDF
-    const { uri } = await Print.printToFileAsync({ html });
+    const { uri } = await Print.printToFileAsync({
+      html,
+      width: 62 * 2.83465,
+      height: 50 * 2.83465,
+    });
     
     // Share/Print PDF
-    await shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+    await shareAsync(uri);
     
     return { success: true };
   } catch (error) {
-    console.error('Error printing label:', error);
+    console.error('[SunmiPrinter] Error printing label:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Eroare la imprimare',
@@ -155,54 +172,54 @@ export async function printTestLabel(): Promise<{
     id: 'TEST-001',
     clientName: 'Test Client',
     clientPhone: '0700000000',
-    clientEmail: 'test@example.com',
     productType: 'laptop',
-    productModel: 'Test Model',
-    productSerialNumber: 'SN123456',
-    problemDescription: 'Test problem description',
-    diagnostic: 'Test diagnostic',
-    solutionApplied: 'Test solution',
-    cost: 100,
+    defectDescription: 'Test problem description',
     status: 'pending',
+    createdAt: new Date(),
+    updatedAt: new Date(),
     technicianName: 'Test Technician',
-    dateReceived: new Date().toISOString(),
-    dateDelivered: null,
-    telegramSent: false,
-    telegramMessageId: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    estimatedCost: 100,
+    actualCost: 0,
+    notes: '',
+    telegramGroupId: '',
+    telegramMessageId: 0,
   };
   
   return await printLabel(testTicket);
 }
 
 /**
- * Print multiple labels
+ * Print multiple identical labels
  */
-export async function printMultipleLabels(tickets: ServiceTicket[]): Promise<{
-  success: boolean;
-  printed: number;
-  error?: string;
-}> {
+export async function printMultipleLabels(
+  ticket: ServiceTicket,
+  count: number,
+): Promise<{ success: boolean; error?: string }> {
   try {
-    let printedCount = 0;
-
-    for (const ticket of tickets) {
-      const result = await printLabel(ticket);
-      if (result.success) {
-        printedCount++;
-      }
-    }
-
-    return {
-      success: printedCount === tickets.length,
-      printed: printedCount,
-      error: printedCount < tickets.length ? 'Unele etichete nu au putut fi tipărite' : undefined,
-    };
+    // Generate QR code image
+    const qrCodeImage = await generateTicketQRCode(ticket.id, ticket.telegramGroupId, ticket.telegramMessageId);
+    
+    // Generate HTML for single label
+    const html = await generateTicketLabelHTML(ticket, qrCodeImage);
+    
+    // Generate multiple labels in one PDF
+    const multipleLabelsHTML = Array(count)
+      .fill(html)
+      .join('<div style="page-break-after: always;"></div>');
+    
+    const { uri } = await Print.printToFileAsync({
+      html: multipleLabelsHTML,
+      width: 62 * 2.83465,
+      height: 50 * 2.83465,
+    });
+    
+    await shareAsync(uri);
+    
+    return { success: true };
   } catch (error) {
+    console.error('[SunmiPrinter] Error printing multiple labels:', error);
     return {
       success: false,
-      printed: 0,
       error: error instanceof Error ? error.message : 'Eroare la imprimare',
     };
   }
@@ -214,6 +231,6 @@ export async function printMultipleLabels(tickets: ServiceTicket[]): Promise<{
 export async function getPrinterStatus(): Promise<{ available: boolean; message: string }> {
   return {
     available: true,
-    message: 'Printer is available via system print service',
+    message: 'Imprimanta disponibilă prin serviciul de imprimare sistem',
   };
 }

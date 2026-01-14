@@ -239,3 +239,22 @@
 - Error: "no expo project found (missing app.json, app.config.js, or package.json)"
 - Cause: eas build not finding Expo configuration files
 - Solution: Ensure all config files are present and eas.json is configured
+
+
+## Phase 22: QR Code Real on Labels
+- [x] Generate QR code as PNG image using qrcode npm package
+- [x] Embed QR code image in ticket label HTML
+- [ ] Embed QR code image in product label HTML
+- [ ] Test QR code scanning with app installed
+- [ ] Test QR code fallback to Telegram
+- [ ] Verify QR code printing on Sunmi T2S
+
+## QR Code Implementation Details:
+- Created lib/qr-code-generator.ts with generateTicketQRCode() function
+- Generates QR code as base64 PNG image (not text placeholder)
+- Deep link format: manusapp://ticket/TICKET_ID
+- Includes Telegram message ID for private link fallback
+- Updated lib/sunmi-printer.ts to embed QR code in ticket labels
+- QR code sized 18mm x 18mm on 62mm x 50mm label
+- Telegram fallback link printed below QR code for manual access
+- Ready for testing on Sunmi T2S device
