@@ -1,140 +1,142 @@
 /**
  * Thermal Printer Service for Sunmi T2S
- * Uses react-native-sunmi-inner-printer for SunmiPrinterService
+ * Uses expo-print for PDF generation and system print service
  * Label format: 62mm width x 50mm height
  */
 
-import SunmiInnerPrinter from 'react-native-sunmi-inner-printer';
+import * as Print from 'expo-print';
+import { shareAsync } from 'expo-sharing';
 import type { ServiceTicket } from '@/types/ticket';
 import { generateTicketQRData, generateTelegramFallbackLink } from './qr-code';
 import { settingsStorage } from './storage';
 
 /**
- * Initialize Sunmi printer
+ * Generate HTML for ticket label (62mm x 50mm)
  */
-async function initPrinter(): Promise<void> {
-  try {
-    await SunmiInnerPrinter.printerInit();
-  } catch (error) {
-    console.error('Error initializing printer:', error);
-    throw error;
-  }
-}
-
-/**
- * Generate ticket label text for Sunmi printer
- * Format optimized for 62mm x 50mm label
- */
-function generateTicketLabelText(ticket: ServiceTicket): string {
+function generateTicketLabelHTML(ticket: ServiceTicket, telegramLink?: string): string {
   const formattedDate = new Date(ticket.dateReceived).toLocaleDateString('ro-RO');
-  
-  // Truncate problem description to fit on label
-  const problemText = ticket.problemDescription.length > 40
-    ? ticket.problemDescription.substring(0, 37) + '...'
+  const problemText = ticket.problemDescription.length > 50
+    ? ticket.problemDescription.substring(0, 47) + '...'
     : ticket.problemDescription;
 
-  let labelText = '';
-  
-  // Header - centered, bold, double height
-  labelText += '\n';
-  labelText += '     FIȘĂ SERVICE\n';
-  labelText += '═══════════════════════════\n';
-  labelText += '\n';
-  
-  // Info section
-  labelText += `ID: ${ticket.id}\n`;
-  labelText += `TEL: ${ticket.clientPhone}\n`;
-  labelText += `DATA: ${formattedDate}\n`;
-  labelText += '───────────────────────────\n';
-  
-  // Defect section
-  labelText += 'DEFECT:\n';
-  labelText += `${problemText}\n`;
-  labelText += '───────────────────────────\n';
-  
-  // Footer
-  labelText += '\n';
-  labelText += 'Scanează QR pentru detalii\n';
-  labelText += '\n';
+  // Generate QR code data
+  const qrData = generateTicketQRData(ticket);
 
-  return labelText;
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <style>
+        @page {
+          size: 62mm 50mm;
+          margin: 0;
+        }
+        body {
+          margin: 0;
+          padding: 4mm;
+          font-family: 'Courier New', monospace;
+          font-size: 10pt;
+          line-height: 1.2;
+          width: 62mm;
+          height: 50mm;
+          box-sizing: border-box;
+        }
+        .header {
+          text-align: center;
+          font-weight: bold;
+          font-size: 14pt;
+          margin-bottom: 2mm;
+          border-bottom: 2px solid #000;
+          padding-bottom: 1mm;
+        }
+        .info-row {
+          margin: 1mm 0;
+          font-size: 9pt;
+        }
+        .label {
+          font-weight: bold;
+        }
+        .separator {
+          border-top: 1px dashed #000;
+          margin: 2mm 0;
+        }
+        .qr-container {
+          text-align: center;
+          margin-top: 2mm;
+        }
+        .qr-placeholder {
+          font-size: 8pt;
+          text-align: center;
+          margin-top: 2mm;
+        }
+        .telegram-link {
+          font-size: 7pt;
+          text-align: center;
+          margin-top: 1mm;
+          word-break: break-all;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">FIȘĂ SERVICE</div>
+      
+      <div class="info-row">
+        <span class="label">ID:</span> ${ticket.id}
+      </div>
+      <div class="info-row">
+        <span class="label">TEL:</span> ${ticket.clientPhone}
+      </div>
+      <div class="info-row">
+        <span class="label">DATA:</span> ${formattedDate}
+      </div>
+      
+      <div class="separator"></div>
+      
+      <div class="info-row">
+        <span class="label">DEFECT:</span><br>
+        ${problemText}
+      </div>
+      
+      <div class="qr-placeholder">
+        Scanează QR pentru detalii
+      </div>
+      
+      ${telegramLink ? `
+        <div class="telegram-link">${telegramLink}</div>
+      ` : ''}
+    </body>
+    </html>
+  `;
 }
 
 /**
- * Print ticket label using Sunmi printer
+ * Print ticket label on Sunmi T2S thermal printer
  */
-export async function printLabel(ticket: ServiceTicket, qrCodeDataUrl?: string): Promise<{
+export async function printLabel(ticket: ServiceTicket): Promise<{
   success: boolean;
   error?: string;
 }> {
   try {
-    // Initialize printer
-    await initPrinter();
-
-    // Set alignment to center
-    await SunmiInnerPrinter.setAlignment(1); // 0=left, 1=center, 2=right
-
-    // Print header with larger font
-    await SunmiInnerPrinter.setFontSize(28);
-    await SunmiInnerPrinter.printText('FIȘĂ SERVICE\n');
-    await SunmiInnerPrinter.printText('═══════════════════════════\n');
-
-    // Reset to normal font
-    await SunmiInnerPrinter.setFontSize(24);
-    await SunmiInnerPrinter.printText('\n');
-
-    // Set alignment to left for info
-    await SunmiInnerPrinter.setAlignment(0);
-
-    // Print ticket info
-    const formattedDate = new Date(ticket.dateReceived).toLocaleDateString('ro-RO');
-    await SunmiInnerPrinter.printText(`ID: ${ticket.id}\n`);
-    await SunmiInnerPrinter.printText(`TEL: ${ticket.clientPhone}\n`);
-    await SunmiInnerPrinter.printText(`DATA: ${formattedDate}\n`);
-    await SunmiInnerPrinter.printText('───────────────────────────\n');
-
-    // Print defect
-    const problemText = ticket.problemDescription.length > 40
-      ? ticket.problemDescription.substring(0, 37) + '...'
-      : ticket.problemDescription;
-    
-    await SunmiInnerPrinter.printText('DEFECT:\n');
-    await SunmiInnerPrinter.printText(`${problemText}\n`);
-    await SunmiInnerPrinter.printText('───────────────────────────\n');
-
-    // Print QR code
-    await SunmiInnerPrinter.setAlignment(1); // Center
-    await SunmiInnerPrinter.printText('\n');
-    
-    // Generate QR code data (deep link with Telegram fallback)
-    const qrData = generateTicketQRData(ticket);
-    
-    try {
-      // Print QR code using Sunmi API
-      // Parameters: data, moduleSize (8), errorLevel (3 = high)
-      await SunmiInnerPrinter.printQRCode(qrData, 8, 3);
-    } catch (error) {
-      console.error('Error printing QR code:', error);
-      // Fallback to text if QR code fails
-      await SunmiInnerPrinter.printText('Scanează QR pentru detalii\n');
-    }
-    
-    // Print Telegram fallback link
-    const settings = await settingsStorage.getSettings();
+    // Get Telegram link
     const telegramConfig = await settingsStorage.getTelegramConfig();
-    if (telegramConfig?.groupId && ticket.telegramMessageId) {
-      const telegramLink = generateTelegramFallbackLink(ticket, telegramConfig.groupId);
-      await SunmiInnerPrinter.setFontSize(18);
-      await SunmiInnerPrinter.printText(`${telegramLink}\n`);
-    }
-
-    // Feed paper
-    await SunmiInnerPrinter.printText('\n\n');
-    await SunmiInnerPrinter.lineWrap(3);
-
+    const telegramLink = telegramConfig?.groupId && ticket.telegramMessageId
+      ? generateTelegramFallbackLink(ticket, telegramConfig.groupId)
+      : undefined;
+    
+    // Generate HTML
+    const html = generateTicketLabelHTML(ticket, telegramLink);
+    
+    // Print to PDF
+    const { uri } = await Print.printToFileAsync({ html });
+    
+    // Share/Print PDF
+    await shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+    
     return { success: true };
   } catch (error) {
-    console.error('Error printing ticket label:', error);
+    console.error('Error printing label:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Eroare la imprimare',
@@ -149,46 +151,35 @@ export async function printTestLabel(): Promise<{
   success: boolean;
   error?: string;
 }> {
-  try {
-    const testTicket: ServiceTicket = {
-      id: 'TEST123',
-      clientName: 'Test Client',
-      clientPhone: '0712345678',
-      clientEmail: 'test@example.com',
-      productType: 'laptop',
-      productModel: 'Test Model',
-      productSerialNumber: 'SN123456',
-      problemDescription: 'Test problem description',
-      diagnostic: '',
-      solutionApplied: '',
-      cost: 100,
-      status: 'pending',
-      technicianName: 'Test Technician',
-      dateReceived: new Date().toISOString(),
-      dateDelivered: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      telegramSent: false,
-      telegramMessageId: null,
-    };
-
-    return await printLabel(testTicket);
-  } catch (error) {
-    console.error('Error printing test label:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Eroare la imprimare test',
-    };
-  }
+  const testTicket: ServiceTicket = {
+    id: 'TEST-001',
+    clientName: 'Test Client',
+    clientPhone: '0700000000',
+    clientEmail: 'test@example.com',
+    productType: 'laptop',
+    productModel: 'Test Model',
+    productSerialNumber: 'SN123456',
+    problemDescription: 'Test problem description',
+    diagnostic: 'Test diagnostic',
+    solutionApplied: 'Test solution',
+    cost: 100,
+    status: 'pending',
+    technicianName: 'Test Technician',
+    dateReceived: new Date().toISOString(),
+    dateDelivered: null,
+    telegramSent: false,
+    telegramMessageId: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  
+  return await printLabel(testTicket);
 }
 
 /**
  * Print multiple labels
  */
-export async function printMultipleLabels(
-  tickets: ServiceTicket[],
-  qrCodeDataUrls?: string[]
-): Promise<{
+export async function printMultipleLabels(tickets: ServiceTicket[]): Promise<{
   success: boolean;
   printed: number;
   error?: string;
@@ -196,17 +187,10 @@ export async function printMultipleLabels(
   try {
     let printedCount = 0;
 
-    for (let i = 0; i < tickets.length; i++) {
-      const ticket = tickets[i];
-      const qrCode = qrCodeDataUrls?.[i];
-
-      try {
-        const result = await printLabel(ticket, qrCode);
-        if (result.success) {
-          printedCount++;
-        }
-      } catch (e) {
-        console.error('Error printing label:', e);
+    for (const ticket of tickets) {
+      const result = await printLabel(ticket);
+      if (result.success) {
+        printedCount++;
       }
     }
 
@@ -216,7 +200,6 @@ export async function printMultipleLabels(
       error: printedCount < tickets.length ? 'Unele etichete nu au putut fi tipărite' : undefined,
     };
   } catch (error) {
-    console.error('Error printing multiple labels:', error);
     return {
       success: false,
       printed: 0,
@@ -228,20 +211,9 @@ export async function printMultipleLabels(
 /**
  * Get printer status
  */
-export async function getPrinterStatus(): Promise<{
-  available: boolean;
-  message: string;
-}> {
-  try {
-    await initPrinter();
-    return {
-      available: true,
-      message: 'Sunmi PrinterService disponibil',
-    };
-  } catch (error) {
-    return {
-      available: false,
-      message: 'Sunmi PrinterService indisponibil',
-    };
-  }
+export async function getPrinterStatus(): Promise<{ available: boolean; message: string }> {
+  return {
+    available: true,
+    message: 'Printer is available via system print service',
+  };
 }

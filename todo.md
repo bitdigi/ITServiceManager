@@ -212,12 +212,12 @@
 
 
 ## Phase 18: Implement Sunmi Official Printer Library
-- [x] Install react-native-sunmi-inner-printer package
-- [x] Configure native module linking (type declarations)
-- [x] Rewrite ticket label printer with Sunmi API
-- [x] Rewrite product label printer with Sunmi API
-- [ ] Test printing on Sunmi T2S device (pending user testing)
-- [ ] Verify SunmiPrinterService connection (pending user testing)
+- [ ] Install react-native-sunmi-inner-printer package
+- [ ] Configure native module linking
+- [ ] Rewrite ticket label printer with Sunmi API
+- [ ] Rewrite product label printer with Sunmi API
+- [ ] Test printing on Sunmi T2S device
+- [ ] Verify SunmiPrinterService connection
 
 ## Sunmi T2S Printer Details:
 - Device has SunmiPrinterService installed
@@ -225,19 +225,3 @@
 - Provides native bindings to SunmiPrinterService
 - Supports ESC/POS commands natively
 - Better integration than generic Android Print Service
-
-
-## Phase 19: QR Code with Deep Link and Telegram Protection
-- [x] Update qr-code.ts to generate deep link with Telegram fallback
-- [x] Implement Telegram message ID storage when sending ticket
-- [x] Create private Telegram link (t.me/c/GROUP_ID/MESSAGE_ID)
-- [x] Integrate printQRCode() in sunmi-printer.ts
-- [ ] Test QR code scanning with app installed (pending user testing)
-- [ ] Test QR code scanning without app (Telegram fallback) (pending user testing)
-- [ ] Verify non-members cannot access Telegram message (pending user testing)
-
-## QR Code Flow:
-1. **App installed**: manusapp://ticket/TICKET_ID → Opens ticket in app
-2. **No app**: Fallback to https://t.me/c/GROUP_ID/MESSAGE_ID → Opens Telegram message
-3. **Non-member**: Telegram blocks access automatically (private group)
-4. **Security**: Only group members can view ticket details on Telegram

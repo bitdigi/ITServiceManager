@@ -24,22 +24,17 @@ export function generateTicketQRData(ticket: ServiceTicket): string {
 
 /**
  * Generate fallback Telegram link for a ticket
- * This link opens the Telegram message directly (private link)
- * Only group members can access this link
+ * This link opens the Telegram group and searches for the ticket message
  */
 export function generateTelegramFallbackLink(ticket: ServiceTicket, groupId?: string): string {
-  if (!groupId || !ticket.telegramMessageId) {
-    // Fallback to search if no message ID
-    return ticket.id ? `https://t.me/search?q=${ticket.id}` : '';
+  if (!groupId) {
+    return '';
   }
   
-  // Remove the '-100' prefix from group ID for private link
-  // Format: -1001234567890 -> 1234567890
-  const cleanGroupId = groupId.replace('-100', '');
-  
-  // Telegram private link format: https://t.me/c/GROUP_ID/MESSAGE_ID
-  // Only group members can access this link
-  return `https://t.me/c/${cleanGroupId}/${ticket.telegramMessageId}`;
+  // Telegram link format: https://t.me/c/GROUP_ID/MESSAGE_ID
+  // We'll use the ticket ID as search parameter instead
+  // Format: https://t.me/search?q=TICKET_ID
+  return `https://t.me/search?q=${ticket.id}`;
 }
 
 /**
