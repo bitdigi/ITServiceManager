@@ -258,3 +258,23 @@
 - QR code sized 18mm x 18mm on 62mm x 50mm label
 - Telegram fallback link printed below QR code for manual access
 - Ready for testing on Sunmi T2S device
+
+
+## Phase 23: Sunmi Native Module Implementation (AIDL)
+- [ ] Create Android module structure for Sunmi printer integration
+- [ ] Download Sunmi SDK and AIDL files
+- [ ] Implement AIDL binding to SunmiPrinterService
+- [ ] Create Java bridge class for printer operations
+- [ ] Implement React Native NativeModules bridge
+- [ ] Add Gradle dependency for com.sunmi:printerlibrary
+- [ ] Update sunmi-printer.ts to use native module
+- [ ] Generate QR code as bitmap for native printing
+- [ ] Build APK with native code via EAS Build
+- [ ] Test printing on Sunmi T2S device
+
+## Sunmi Native Module Details:
+- Module name: SunmiPrinterModule
+- Methods: printLabel(), printBitmap(), printText(), labelLocate(), etc.
+- AIDL binding: Direct connection to SunmiPrinterService
+- Label format: 62mm x 50mm with QR code bitmap
+- Fallback: Text-based printing if bitmap fails
