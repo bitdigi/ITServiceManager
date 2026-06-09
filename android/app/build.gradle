@@ -121,11 +121,7 @@ android {
             crunchPngs enablePngCrunchInRelease.toBoolean()
         }
     }
-    sourceSets {
-        main {
-            aidl.srcDirs = ['src/main/aidl']
-        }
-    }
+
     packagingOptions {
         jniLibs {
             def enableLegacyPackaging = findProperty('expo.useLegacyPackaging') ?: 'false'
@@ -160,7 +156,7 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
-    implementation 'com.sunmi:printerlibrary:1.0.18'
+
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
