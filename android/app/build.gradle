@@ -121,6 +121,11 @@ android {
             crunchPngs enablePngCrunchInRelease.toBoolean()
         }
     }
+    sourceSets {
+        main {
+            aidl.srcDirs = ['src/main/aidl']
+        }
+    }
     packagingOptions {
         jniLibs {
             def enableLegacyPackaging = findProperty('expo.useLegacyPackaging') ?: 'false'
