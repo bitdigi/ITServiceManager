@@ -22,6 +22,7 @@ import { useTickets } from '@/hooks/use-tickets';
 import { ServiceTicket, TicketStatus, ProductType } from '@/types/ticket';
 import { sendTicketToTelegram, deleteMessageFromTelegram } from '@/lib/telegram';
 import { printLabel } from '@/lib/sunmi-printer';
+import { SendLabelButton } from '@/components/send-label-button';
 
 const PRODUCT_NAMES: Record<ProductType, string> = {
   laptop: 'Laptop',
@@ -264,6 +265,21 @@ export default function TicketDetailScreen() {
             </Pressable>
           </View>
         </View>
+
+        {/* Send Label to Telegram Button */}
+        {ticket && (
+          <View style={styles.section}>
+            <SendLabelButton
+              ticketId={ticket.id}
+              clientName={ticket.clientName}
+              clientPhone={ticket.clientPhone}
+              defect={ticket.problemDescription}
+              date={new Date(ticket.dateReceived).toLocaleDateString('ro-RO')}
+              telegramChatId={process.env.EXPO_PUBLIC_TELEGRAM_CHAT_ID || ''}
+              deepLinkUrl={`manusapp://ticket/${ticket.id}`}
+            />
+          </View>
+        )}
 
         {/* Status Badge */}
         <View
