@@ -15,7 +15,7 @@ import com.facebook.react.defaults.DefaultReactNativeHost
 
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
-import space.manus.ITServiceManager.t20251218163530.sunmi.SunmiPrinterPackage
+
 
 class MainApplication : Application(), ReactApplication {
 
@@ -23,9 +23,7 @@ class MainApplication : Application(), ReactApplication {
       this,
       object : DefaultReactNativeHost(this) {
         override fun getPackages(): List<ReactPackage> =
-            PackageList(this).packages.apply {
-              add(SunmiPrinterPackage())
-            }
+            PackageList(this).packages
 
           override fun getJSMainModuleName(): String = ".expo/.virtual-metro-entry"
 
