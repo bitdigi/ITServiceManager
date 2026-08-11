@@ -99,6 +99,12 @@
 - [x] Add shared backend storage, upsert API, secure access verification, and deletion tombstones
 - [ ] Publish the project so installed Android devices can reach the permanent shared backend
 
+## Phase 25: Independent Hosting Migration
+- [ ] Select an independent hosting model for the ticket synchronization backend
+- [ ] Prepare database, API, security, backup, and deployment configuration outside the workspace
+- [ ] Update the Android application to use the independently hosted API endpoint
+- [ ] Test cross-device synchronization through the independent backend
+
 ## Known Issues & Fixes
 - [x] ISSUE: Fișele nu se sincronizau între telefoane
   - Cauza: `getUpdates` nu oferă istoric complet Telegram, iar importul genera ID-uri locale noi
@@ -289,3 +295,10 @@
 - [ ] Restore and verify public web access for itservmgr-kisnkolw.manus.space after HTTP 404/unavailable errors
 - [ ] Verify a current preview URL works from an external browser before reporting it to the user
 - [ ] Confirm Telegram label flow remains reachable from the web version
+
+## Phase 26: Windows LAN Web Launcher
+- [x] Create Windows batch launcher for the local API and web interface
+- [x] Document LAN access from Windows, Android, and iOS browsers
+- [ ] Move the database and secrets to infrastructure controlled by the user
+- [ ] Configure the web client and APK to use the independent local API endpoint
+- [ ] Test access through Windows Firewall from a second device
