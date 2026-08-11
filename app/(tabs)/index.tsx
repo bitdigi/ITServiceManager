@@ -92,14 +92,14 @@ export default function HomeScreen() {
   const surfaceColor = useThemeColor({}, 'surface');
   const secondaryTextColor = useThemeColor({}, 'textSecondary');
 
-  // Auto-sync from Telegram on app launch
+  // Pull the shared ticket database on app launch.
   useEffect(() => {
     const autoSync = async () => {
       if (settings?.telegramConfig?.botToken && settings?.telegramConfig?.groupId) {
         try {
           const result = await syncTicketsFromTelegramAuto();
           if (result.success && result.imported > 0) {
-            console.log(`Auto-synced ${result.imported} tickets from Telegram`);
+            console.log(`Auto-synced ${result.imported} shared ticket changes`);
             await loadTickets();
           }
         } catch (error) {
@@ -136,7 +136,7 @@ export default function HomeScreen() {
     setFilteredTickets(filtered);
   }, [searchQuery, tickets]);
 
-  // Handle sync from Telegram
+  // Handle manual synchronization with the shared ticket database.
   const handleSync = async () => {
     if (!settings?.telegramConfig?.botToken || !settings?.telegramConfig?.groupId) {
       Alert.alert('Eroare', 'Configurați token-ul Telegram și ID-ul grupului în Setări');
@@ -150,7 +150,7 @@ export default function HomeScreen() {
       if (result.success) {
         // Reload tickets after sync
         await loadTickets();
-        Alert.alert('Succes', `${result.imported} fișe sincronizate de pe Telegram`);
+        Alert.alert('Succes', `${result.imported} modificări sincronizate între dispozitive`);
       } else {
         Alert.alert('Eroare', result.error || 'Eroare la sincronizare');
       }

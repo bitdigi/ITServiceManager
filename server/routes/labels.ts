@@ -93,7 +93,9 @@ router.post('/send-telegram', async (req: Request, res: Response) => {
 
     const formData = new FormData();
     formData.append('chat_id', telegramChatId);
-    formData.append('document', new Blob([pdfBuffer], { type: 'application/pdf' }), `label_${ticketId}.pdf`);
+    const documentBytes = new Uint8Array(pdfBuffer.byteLength);
+    documentBytes.set(pdfBuffer);
+    formData.append('document', new Blob([documentBytes], { type: 'application/pdf' }), `label_${ticketId}.pdf`);
     formData.append('caption', `🏷️ Etichetă Service\n\n📋 ID: ${ticketId}\n👤 Client: ${clientName}\n📱 Tel: ${clientPhone}`);
 
     const response = await axios.post(

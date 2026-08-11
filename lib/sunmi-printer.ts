@@ -78,9 +78,9 @@ export async function printLabel(ticket: ServiceTicket): Promise<{ success: bool
     await nativePrinter.lineWrap(1);
     
     // Print defect description
-    const defectText = ticket.defectDescription.length > 40
-      ? ticket.defectDescription.substring(0, 37) + '...'
-      : ticket.defectDescription;
+    const defectText = ticket.problemDescription.length > 40
+      ? ticket.problemDescription.substring(0, 37) + '...'
+      : ticket.problemDescription;
     await nativePrinter.printText(`Defect: ${defectText}`);
     
     await nativePrinter.lineWrap(1);
@@ -91,13 +91,6 @@ export async function printLabel(ticket: ServiceTicket): Promise<{ success: bool
     await nativePrinter.printQRCode(deepLink, 8, 3); // moduleSize=8, errorLevel=3 (high)
     
     await nativePrinter.lineWrap(1);
-    
-    // Print Telegram fallback link if available
-    if (ticket.telegramGroupId && ticket.telegramMessageId) {
-      const telegramLink = `t.me/c/${ticket.telegramGroupId}/${ticket.telegramMessageId}`;
-      await nativePrinter.setFontSize(20);
-      await nativePrinter.printText(telegramLink);
-    }
     
     await nativePrinter.lineWrap(2);
     
@@ -126,17 +119,22 @@ export async function printTestLabel(): Promise<{
     id: 'TEST-001',
     clientName: 'Test Client',
     clientPhone: '0700000000',
+    clientEmail: '',
     productType: 'laptop',
-    defectDescription: 'Test problem description',
+    productModel: 'Test',
+    productSerialNumber: '',
+    problemDescription: 'Test problem description',
+    diagnostic: 'Test diagnostic',
+    solutionApplied: 'Test solution',
+    cost: 100,
     status: 'pending',
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    dateReceived: new Date().toISOString(),
+    dateDelivered: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     technicianName: 'Test Technician',
-    estimatedCost: 100,
-    actualCost: 0,
-    notes: '',
-    telegramGroupId: '',
-    telegramMessageId: 0,
+    telegramSent: false,
+    telegramMessageId: null,
   };
   
   return await printLabel(testTicket);

@@ -1,6 +1,11 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import {
+  InsertServiceTicketRecord,
+  InsertUser,
+  serviceTickets,
+  users,
+} from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +94,51 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+/** Return active tickets and deletion tombstones, newest changes first. */
+export async function getAllServiceTickets() {
+  const db = await getDb();
+  if (!db) throw new Error("Baza de date pentru sincronizare nu este disponibilă");
+
+  return db.select().from(serviceTickets).orderBy(desc(serviceTickets.updatedAt));
+}
+
+/**
+ * Last-write-wins upsert based on the ISO update timestamp produced by the app.
+ * This protects a recently updated or deleted record from being overwritten by a
+ * stale offline copy pushed by another phone.
+ */
+export async function upsertServiceTicket(ticket: InsertServiceTicketRecord) {
+  const db = await getDb();
+  if (!db) throw new Error("Baza de date pentru sincronizare nu este disponibilă");
+
+  const existing = await db.select().from(serviceTickets).where(eq(serviceTickets.id, ticket.id)).limit(1);
+  if (existing[0] && existing[0].updatedAt > ticket.updatedAt) {
+    return { applied: false, ticket: existing[0] };
+  }
+
+  if (!existing[0]) {
+    await db.insert(serviceTickets).values(ticket);
+    return { applied: true, ticket };
+  }
+
+  // Preserve the timestamp at which the ticket was originally created.
+  const values = { ...ticket, createdAt: existing[0].createdAt };
+  await db.update(serviceTickets).set(values).where(eq(serviceTickets.id, ticket.id));
+  return { applied: true, ticket: values };
+}
+
+/** Mark a record as deleted instead of removing it, so other devices receive the deletion. */
+export async function deleteServiceTicket(id: string, updatedAt: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Baza de date pentru sincronizare nu este disponibilă");
+
+  const existing = await db.select().from(serviceTickets).where(eq(serviceTickets.id, id)).limit(1);
+  if (!existing[0]) return { applied: false, reason: "not_found" as const };
+  if (existing[0].updatedAt > updatedAt) return { applied: false, reason: "stale" as const };
+
+  await db
+    .update(serviceTickets)
+    .set({ deletedAt: updatedAt, updatedAt })
+    .where(eq(serviceTickets.id, id));
+  return { applied: true, reason: "deleted" as const };
+}

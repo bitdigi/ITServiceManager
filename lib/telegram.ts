@@ -5,6 +5,7 @@
 
 import { ServiceTicket, ProductType, TicketStatus } from '@/types/ticket';
 import { settingsStorage, ticketStorage } from './storage';
+import { syncTicketsWithBackend } from './ticket-sync';
 
 const TELEGRAM_API_BASE = 'https://api.telegram.org';
 
@@ -289,80 +290,20 @@ export async function getTicketsFromTelegramHistory(): Promise<ServiceTicket[]> 
 }
 
 /**
- * Sync tickets from Telegram and add missing ones to local storage
+ * Sync tickets using the shared backend. The old function name is retained so
+ * existing screens continue working while Telegram remains notifications only.
  */
 export async function syncTicketsFromTelegramAuto(): Promise<{
   success: boolean;
   imported: number;
   error?: string;
 }> {
-  try {
-    const config = await settingsStorage.getTelegramConfig();
-
-    if (!config.botToken || !config.groupId) {
-      return {
-        success: false,
-        imported: 0,
-        error: 'Telegram configuration is missing',
-      };
-    }
-
-    // Get tickets from Telegram
-    const telegramTickets = await getTicketsFromTelegramHistory();
-
-    if (telegramTickets.length === 0) {
-      return {
-        success: true,
-        imported: 0,
-      };
-    }
-
-    // Get local tickets
-    const localTickets = await ticketStorage.getAllTickets();
-    const localIds = new Set(localTickets.map(t => t.id));
-
-    // Import missing tickets
-    let importedCount = 0;
-    for (const ticket of telegramTickets) {
-      if (!localIds.has(ticket.id)) {
-        try {
-          await ticketStorage.createTicket({
-            clientName: ticket.clientName,
-            clientPhone: ticket.clientPhone,
-            clientEmail: ticket.clientEmail,
-            productType: ticket.productType,
-            productModel: ticket.productModel,
-            productSerialNumber: ticket.productSerialNumber,
-            problemDescription: ticket.problemDescription,
-            diagnostic: ticket.diagnostic,
-            solutionApplied: ticket.solutionApplied,
-            cost: ticket.cost,
-            status: ticket.status,
-            technicianName: ticket.technicianName,
-            dateReceived: ticket.dateReceived,
-            dateDelivered: ticket.dateDelivered,
-            telegramSent: true,
-            telegramMessageId: ticket.telegramMessageId,
-          });
-          importedCount++;
-        } catch (e) {
-          console.error('Failed to import ticket:', e);
-        }
-      }
-    }
-
-    return {
-      success: true,
-      imported: importedCount,
-    };
-  } catch (error) {
-    console.error('Error syncing from Telegram:', error);
-    return {
-      success: false,
-      imported: 0,
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
-    };
-  }
+  const result = await syncTicketsWithBackend();
+  return {
+    success: result.success,
+    imported: result.imported + result.updated + result.deleted,
+    error: result.error,
+  };
 }
 
 /**

@@ -6,6 +6,9 @@ import * as ReactNative from "react-native";
 const bundleId = "space.manus.ITServiceManager.t20251218163530";
 const timestamp = bundleId.split(".").pop()?.replace(/^t/, "") ?? "";
 const schemeFromBundleId = `manus${timestamp}`;
+// Android builds do not have a browser hostname from which to derive the API.
+// This becomes available when the project is published to its permanent domain.
+const PUBLISHED_API_BASE_URL = "https://itservmgr-kisnkolw.manus.space";
 
 const env = {
   portal: process.env.EXPO_PUBLIC_OAUTH_PORTAL_URL ?? "",
@@ -45,8 +48,8 @@ export function getApiBaseUrl(): string {
     }
   }
 
-  // Fallback to empty (will use relative URL)
-  return "";
+  // Native clients must call the published backend explicitly.
+  return PUBLISHED_API_BASE_URL;
 }
 
 export const SESSION_TOKEN_KEY = "app_session_token";

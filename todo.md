@@ -73,7 +73,7 @@
 ---
 
 ## Notes
-- Using AsyncStorage for local data persistence (no cloud sync required)
+- Using AsyncStorage for offline local data persistence, with shared backend synchronization for all devices
 - Telegram integration via HTTP API calls
 - All technicians can view all tickets (no role-based filtering)
 - Reports generated from local AsyncStorage data
@@ -82,9 +82,9 @@
 - Responsive design for mobile portrait orientation (9:16)
 - Dark mode support implemented
 - Empty states handled (no tickets, no data)
-- Auto-sync from Telegram on app launch implemented
-- Tickets synced via JSON data embedded in Telegram messages
-- Duplicate detection prevents importing same ticket twice
+- Telegram is used for ticket notifications and printable labels, not as a ticket-history database
+- Auto-sync from the shared ticket database runs on app launch and after manual sync
+- Original ticket IDs, updates, and deletion tombstones are preserved across devices
 
 
 ## Phase 9: Multi-Device Synchronization
@@ -93,11 +93,16 @@
 - [x] Handle duplicate tickets from sync
 - [x] Show sync status indicator on Home screen
 - [ ] Test sync between multiple devices (pending user testing)
+- [x] Fix reported defect: a ticket created on one phone is not imported on another phone after manual synchronization
+- [x] Preserve original remote ticket IDs when importing synchronized tickets
+- [x] Replace the nonfunctional Telegram update polling approach with a supported shared-ticket synchronization mechanism
+- [x] Add shared backend storage, upsert API, secure access verification, and deletion tombstones
+- [ ] Publish the project so installed Android devices can reach the permanent shared backend
 
 ## Known Issues & Fixes
-- [x] ISSUE: Fișele nu se sincronizează automat între telefoane
-  - Cauza: Fiecare telefon are stocare locală independentă
-  - Soluție: Implementare sincronizare automată din Telegram la lansare app - REZOLVAT
+- [x] ISSUE: Fișele nu se sincronizau între telefoane
+  - Cauza: `getUpdates` nu oferă istoric complet Telegram, iar importul genera ID-uri locale noi
+  - Soluție: sincronizare push/pull prin baza de date partajată, păstrarea ID-ului original și tombstone-uri pentru ștergeri
 - [x] ISSUE: Eroare "Unmatched Route" la deschiderea fișei
   - Cauza: Navigare incorectă la /ticket-detail în loc de /ticket-detail/[id]
   - Soluție: Fix navigare în Home screen - REZOLVAT
@@ -278,3 +283,9 @@
 - AIDL binding: Direct connection to SunmiPrinterService
 - Label format: 62mm x 50mm with QR code bitmap
 - Fallback: Text-based printing if bitmap fails
+
+
+## Phase 24: Web Access Recovery
+- [ ] Restore and verify public web access for itservmgr-kisnkolw.manus.space after HTTP 404/unavailable errors
+- [ ] Verify a current preview URL works from an external browser before reporting it to the user
+- [ ] Confirm Telegram label flow remains reachable from the web version

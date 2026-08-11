@@ -341,6 +341,21 @@ export default function TicketDetailScreen() {
           </View>
         </View>
 
+        {/* Send Label Button */}
+        {ticket && (
+          <View style={styles.section}>
+            <SendLabelButton
+              ticketId={ticket.id}
+              clientName={ticket.clientName}
+              clientPhone={ticket.clientPhone}
+              defect={ticket.problemDescription}
+              date={new Date(ticket.dateReceived).toLocaleDateString('ro-RO')}
+              telegramChatId="-1001711450173"
+              deepLinkUrl={`manusapp://ticket/${ticket.id}`}
+            />
+          </View>
+        )}
+
         {/* Metadata */}
         <View style={styles.section}>
           <ThemedText type="subtitle">{TRANSLATIONS.metadata}</ThemedText>

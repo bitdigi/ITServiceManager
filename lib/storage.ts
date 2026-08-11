@@ -14,6 +14,12 @@ function generateId(): string {
 const TICKETS_KEY = '@it_service_manager/tickets';
 const SETTINGS_KEY = '@it_service_manager/settings';
 const TELEGRAM_CONFIG_KEY = '@it_service_manager/telegram_config';
+const PENDING_DELETIONS_KEY = '@it_service_manager/pending_ticket_deletions';
+
+export interface PendingTicketDeletion {
+  id: string;
+  updatedAt: string;
+}
 
 /**
  * Ticket Operations
@@ -96,6 +102,51 @@ export const ticketStorage = {
   },
 
   /**
+   * Merge a full backend snapshot into the offline store. A remote ticket only
+   * replaces a local copy when it is newer; deletion tombstones remove stale
+   * records so a deleted ticket cannot reappear after a later manual sync.
+   */
+  async mergeRemoteTickets(remoteTickets: Array<ServiceTicket & { deletedAt?: string | null }>): Promise<{
+    imported: number;
+    updated: number;
+    deleted: number;
+  }> {
+    try {
+      const localTickets = await this.getAllTickets();
+      const localById = new Map(localTickets.map((ticket) => [ticket.id, ticket]));
+      let imported = 0;
+      let updated = 0;
+      let deleted = 0;
+
+      for (const remote of remoteTickets) {
+        const local = localById.get(remote.id);
+        if (remote.deletedAt) {
+          if (local && remote.updatedAt >= local.updatedAt) {
+            localById.delete(remote.id);
+            deleted++;
+          }
+          continue;
+        }
+
+        const { deletedAt: _deletedAt, ...remoteTicket } = remote;
+        if (!local) {
+          localById.set(remote.id, remoteTicket);
+          imported++;
+        } else if (remote.updatedAt > local.updatedAt) {
+          localById.set(remote.id, remoteTicket);
+          updated++;
+        }
+      }
+
+      await AsyncStorage.setItem(TICKETS_KEY, JSON.stringify(Array.from(localById.values())));
+      return { imported, updated, deleted };
+    } catch (error) {
+      console.error('Error merging remote tickets:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Delete ticket
    */
   async deleteTicket(id: string): Promise<boolean> {
@@ -108,12 +159,36 @@ export const ticketStorage = {
         return false;
       }
 
+      const pendingDeletions = await this.getPendingDeletions();
+      const deletion = { id, updatedAt: new Date().toISOString() };
+      const nextDeletions = [...pendingDeletions.filter((item) => item.id !== id), deletion];
       await AsyncStorage.setItem(TICKETS_KEY, JSON.stringify(filtered));
+      await AsyncStorage.setItem(PENDING_DELETIONS_KEY, JSON.stringify(nextDeletions));
       return true;
     } catch (error) {
       console.error('Error deleting ticket:', error);
       throw error;
     }
+  },
+
+  /** Return local deletions awaiting delivery to the shared backend. */
+  async getPendingDeletions(): Promise<PendingTicketDeletion[]> {
+    try {
+      const data = await AsyncStorage.getItem(PENDING_DELETIONS_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Error getting pending ticket deletions:', error);
+      return [];
+    }
+  },
+
+  /** Remove a deletion from the retry queue once the backend acknowledges it. */
+  async clearPendingDeletion(id: string): Promise<void> {
+    const pendingDeletions = await this.getPendingDeletions();
+    await AsyncStorage.setItem(
+      PENDING_DELETIONS_KEY,
+      JSON.stringify(pendingDeletions.filter((item) => item.id !== id)),
+    );
   },
 
   /**

@@ -3,6 +3,7 @@ import { Pressable, ActivityIndicator, Alert } from 'react-native';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { getApiBaseUrl } from '@/constants/oauth';
 
 interface SendLabelButtonProps {
   ticketId: string;
@@ -34,7 +35,7 @@ export function SendLabelButton({
     try {
       setLoading(true);
 
-      const response = await fetch('/api/labels/send-telegram', {
+      const response = await fetch(`${getApiBaseUrl()}/api/labels/send-telegram`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,8 +77,7 @@ export function SendLabelButton({
           paddingVertical: 12,
           paddingHorizontal: 24,
           borderRadius: 8,
-          opacity: pressed ? 0.8 : 1,
-          opacity: loading ? 0.6 : 1,
+          opacity: loading ? 0.6 : pressed ? 0.8 : 1,
         },
       ]}
     >

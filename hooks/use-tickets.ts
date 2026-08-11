@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ServiceTicket, FilterOptions } from '@/types/ticket';
 import { ticketStorage } from '@/lib/storage';
+import { deleteTicketFromBackend, upsertTicketToBackend } from '@/lib/ticket-sync';
 
 export function useTickets() {
   const [tickets, setTickets] = useState<ServiceTicket[]>([]);
@@ -38,6 +39,9 @@ export function useTickets() {
         setError(null);
         const newTicket = await ticketStorage.createTicket(data);
         setTickets(prev => [newTicket, ...prev]);
+        // Local storage remains usable offline. A later manual sync retries this
+        // write if the device has no connection at creation time.
+        await upsertTicketToBackend(newTicket);
         return newTicket;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to create ticket';
@@ -55,6 +59,7 @@ export function useTickets() {
       const updated = await ticketStorage.updateTicket(id, data);
       if (updated) {
         setTickets(prev => prev.map(t => (t.id === id ? updated : t)));
+        await upsertTicketToBackend(updated);
       }
       return updated;
     } catch (err) {
@@ -71,6 +76,7 @@ export function useTickets() {
       const success = await ticketStorage.deleteTicket(id);
       if (success) {
         setTickets(prev => prev.filter(t => t.id !== id));
+        await deleteTicketFromBackend(id);
       }
       return success;
     } catch (err) {

@@ -1,0 +1,23 @@
+CREATE TABLE `serviceTickets` (
+	`id` varchar(64) NOT NULL,
+	`clientName` varchar(255) NOT NULL,
+	`clientPhone` varchar(64) NOT NULL,
+	`clientEmail` varchar(320) NOT NULL,
+	`productType` varchar(32) NOT NULL,
+	`productModel` varchar(255) NOT NULL,
+	`productSerialNumber` varchar(255) NOT NULL,
+	`problemDescription` text NOT NULL,
+	`diagnostic` text NOT NULL,
+	`solutionApplied` text NOT NULL,
+	`cost` double NOT NULL,
+	`status` varchar(32) NOT NULL,
+	`technicianName` varchar(255) NOT NULL,
+	`dateReceived` varchar(40) NOT NULL,
+	`dateDelivered` varchar(40),
+	`telegramSent` boolean NOT NULL DEFAULT false,
+	`telegramMessageId` varchar(64),
+	`createdAt` varchar(40) NOT NULL,
+	`updatedAt` varchar(40) NOT NULL,
+	`deletedAt` varchar(40),
+	CONSTRAINT `serviceTickets_id` PRIMARY KEY(`id`)
+);
